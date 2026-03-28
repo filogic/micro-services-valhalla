@@ -1,0 +1,38 @@
+{
+  "NL": {
+    "country": "NL", "operator": "Vrachtwagenheffing", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.70,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.269, "EURO_I": 0.269, "EURO_II": 0.269,
+      "EURO_III": 0.228, "EURO_IV": 0.228,
+      "EURO_V": 0.169, "EURO_VI": 0.157, "EURO_VI_E": 0.157
+    }
+  },
+  "DE": {
+    "country": "DE", "operator": "Toll Collect", "system": "distance",
+    "minWeightTonnes": 7.5, "tolledRoadFraction": 0.65,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.352, "EURO_I": 0.352, "EURO_II": 0.352,
+      "EURO_III": 0.318, "EURO_IV": 0.290,
+      "EURO_V": 0.275, "EURO_VI": 0.231, "EURO_VI_E": 0.192
+    }
+  },
+  "BE": {
+    "country": "BE", "operator": "Viapass", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.60,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.320, "EURO_I": 0.320, "EURO_II": 0.320,
+      "EURO_III": 0.280, "EURO_IV": 0.260,
+      "EURO_V": 0.220, "EURO_VI": 0.199, "EURO_VI_E": 0.183
+    }
+  },
+  "FR": {
+    "country": "FR", "operator": "Autoroutes", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.22, "EURO_I": 0.22, "EURO_II": 0.22,
+      "EURO_III": 0.22, "EURO_IV": 0.21,
+      "EURO_V": 0.20, "EURO_VI": 0.20, "EURO_VI_E": 0.20
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# cloudbuild-api.yaml
+# Triggered by push to main branch via GitHub trigger
+# Deploys Go Cloud Function (2nd gen)
+
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'prod-filogic-services-route'
+      - '--gen2'
+      - '--runtime=go122'
+      - '--region=${_REGION}'
+      - '--source=.'
+      - '--entry-point=Route'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--memory=128Mi'
+      - '--cpu=1'
+      - '--min-instances=0'
+      - '--max-instances=100'
+      - '--timeout=30s'
+      - '--set-env-vars=VALHALLA_BASE_URL=${_VALHALLA_URL},DATA_PATH=./internal/data'
+      - '--quiet'
+    id: 'deploy'
+
+substitutions:
+  _REGION: 'europe-west4'
+  _VALHALLA_URL: 'https://viatiq-valhalla-PLACEHOLDER.europe-west4.run.app'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

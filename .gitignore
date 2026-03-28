@@ -1,0 +1,14 @@
+# Go
+/viatiq-api
+*.exe
+vendor/
+
+# Valhalla
+custom_files/
+*.osm.pbf
+*.tar
+
+# IDE
+.idea/
+.vscode/
+*.swp

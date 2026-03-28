@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Valhalla routing engine - builds tiles from OSM data
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    container_name: viatiq-valhalla
+    ports:
+      - "8002:8002"
+    volumes:
+      - valhalla_data:/custom_files
+    environment:
+      - tile_urls=https://download.geofabrik.de/europe-latest.osm.pbf https://download.geofabrik.de/asia-latest.osm.pbf
+      - server_threads=4
+      - build_elevation=False
+      - build_admins=True
+      - build_time_zones=True
+      - build_tar=True
+      - force_rebuild=False
+      - use_tiles_ignore_pbf=True
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 16G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/status"]
+      interval: 60s
+      timeout: 10s
+      retries: 10
+      start_period: 14400s  # tile build Europe+Asia: 2-4 uur eerste keer
+
+  # Viatiq API — Go Cloud Function (lokaal via functions-framework)
+  api:
+    image: golang:1.22-alpine
+    container_name: viatiq-api
+    working_dir: /app
+    command: go run ./cmd/local
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - VALHALLA_BASE_URL=http://valhalla:8002
+      - DATA_PATH=./internal/data
+      - FUNCTION_TARGET=Route
+    depends_on:
+      valhalla:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  valhalla_data:
+    driver: local

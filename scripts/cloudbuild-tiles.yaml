@@ -1,0 +1,76 @@
+# cloudbuild-tiles.yaml
+# Scheduled via Cloud Scheduler (weekly, Sunday 02:00 CET)
+# Builds Valhalla tiles from Geofabrik extract and uploads to GCS
+
+steps:
+  # Step 1: Download Europe + Asia extracts
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        curl -L -o /workspace/europe-latest.osm.pbf \
+          https://download.geofabrik.de/europe-latest.osm.pbf
+        curl -L -o /workspace/asia-latest.osm.pbf \
+          https://download.geofabrik.de/asia-latest.osm.pbf
+        ls -lh /workspace/*.pbf
+    id: 'download-osm'
+
+  # Step 2: Build Valhalla tiles from both extracts
+  - name: 'ghcr.io/valhalla/valhalla:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        mkdir -p /workspace/tiles
+        valhalla_build_config \
+          --mjolnir-tile-dir /workspace/tiles \
+          --mjolnir-timezone /workspace/tiles/tz.sqlite \
+          --mjolnir-admin /workspace/tiles/admin.sqlite \
+          --mjolnir-concurrency 8 \
+          > /workspace/valhalla.json
+        
+        valhalla_build_tiles \
+          -c /workspace/valhalla.json \
+          /workspace/europe-latest.osm.pbf \
+          /workspace/asia-latest.osm.pbf
+        
+        valhalla_build_admins \
+          -c /workspace/valhalla.json \
+          /workspace/europe-latest.osm.pbf \
+          /workspace/asia-latest.osm.pbf
+        
+        # Create indexed tar for fast loading
+        valhalla_build_extract \
+          -c /workspace/valhalla.json \
+          -v
+        
+        echo "Tile build complete"
+        ls -lh /workspace/tiles/
+    id: 'build-tiles'
+
+  # Step 3: Upload to GCS with date-versioned path
+  - name: 'gcr.io/cloud-builders/gsutil'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        DATE=$(date +%Y-%m-%d)
+        
+        # Upload tiles + config
+        gsutil -m cp -r /workspace/tiles/* gs://${_TILES_BUCKET}/eu-asia/${DATE}/
+        gsutil cp /workspace/valhalla.json gs://${_TILES_BUCKET}/eu-asia/${DATE}/
+        
+        # Update 'latest' pointer
+        echo "${DATE}" | gsutil cp - gs://${_TILES_BUCKET}/eu-asia/latest.txt
+        
+        echo "Uploaded tiles to gs://${_TILES_BUCKET}/eu-asia/${DATE}/"
+    id: 'upload-tiles'
+
+substitutions:
+  _TILES_BUCKET: 'viatiq-tiles'
+
+options:
+  machineType: 'E2_HIGHCPU_32'
+  diskSizeGb: 500
+timeout: '21600s'  # 6 uur max voor EU+Asia build
