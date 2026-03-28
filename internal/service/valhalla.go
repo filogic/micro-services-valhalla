@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/filogic/micro-services-valhalla/internal/model"
@@ -21,9 +22,32 @@ func NewValhallaClient(baseURL string) *ValhallaClient {
 	return &ValhallaClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: 15 * time.Second,
 		},
 	}
+}
+
+// fetchIDToken gets a Google ID token from the metadata server for
+// authenticating to internal Cloud Run services.
+func fetchIDToken(ctx context.Context, audience string) (string, error) {
+	url := "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=" + audience
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("metadata server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	token, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(token)), nil
 }
 
 type ValhallaResult struct {
@@ -60,6 +84,11 @@ func (c *ValhallaClient) GetRoute(ctx context.Context, req *model.RouteRequest) 
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	// Authenticate to internal Cloud Run service
+	if token, err := fetchIDToken(ctx, c.baseURL); err == nil {
+		httpReq.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
