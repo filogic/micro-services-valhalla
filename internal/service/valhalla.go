@@ -66,10 +66,12 @@ type ValhallaLeg struct {
 }
 
 type ValhallaManeuver struct {
-	Length      float64
-	Time        float64
-	HasToll     bool
-	CountryCode string // ISO 3166-1 alpha-2 (e.g., "NL", "DE")
+	Length          float64
+	Time            float64
+	HasToll         bool
+	CountryCode     string // ISO 3166-1 alpha-2 (e.g., "NL", "DE")
+	BeginShapeIndex int
+	EndShapeIndex   int
 }
 
 func (c *ValhallaClient) GetRoute(ctx context.Context, req *model.RouteRequest) (*ValhallaResult, error) {
@@ -220,19 +222,13 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 					Time   float64 `json:"time"`
 					HasToll bool    `json:"has_toll"`
 				} `json:"summary"`
-				Admins []struct {
-					CountryCode string `json:"country_code"`
-					CountryText string `json:"country_text"`
-				} `json:"admins"`
-				Nodes []struct {
-					AdminIndex int `json:"admin_index"`
-				} `json:"nodes"`
 				Maneuvers []struct {
 					Length          float64 `json:"length"`
 					Time            float64 `json:"time"`
 					TollBooth       bool    `json:"toll_booth"`
 					Toll            bool    `json:"toll"`
 					BeginShapeIndex int     `json:"begin_shape_index"`
+					EndShapeIndex   int     `json:"end_shape_index"`
 				} `json:"maneuvers"`
 			} `json:"legs"`
 		} `json:"trip"`
@@ -259,13 +255,23 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 			result.Polyline = leg.Shape
 		}
 
+		// Decode polyline to get coordinates for country detection
+		points := decodePolyline(leg.Shape)
+
 		for _, m := range leg.Maneuvers {
-			countryCode := resolveCountryCode(leg.Admins, leg.Nodes, m.BeginShapeIndex)
+			// Determine country from the midpoint of this maneuver's shape segment
+			countryCode := ""
+			midIdx := (m.BeginShapeIndex + m.EndShapeIndex) / 2
+			if midIdx < len(points) {
+				countryCode = countryFromCoord(points[midIdx][0], points[midIdx][1])
+			}
 			vl.Maneuvers = append(vl.Maneuvers, ValhallaManeuver{
-				Length:      m.Length * 1000,
-				Time:        m.Time,
-				HasToll:     m.Toll || m.TollBooth,
-				CountryCode: countryCode,
+				Length:          m.Length * 1000,
+				Time:            m.Time,
+				HasToll:         m.Toll || m.TollBooth,
+				CountryCode:     countryCode,
+				BeginShapeIndex: m.BeginShapeIndex,
+				EndShapeIndex:   m.EndShapeIndex,
 			})
 		}
 
@@ -275,23 +281,103 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 	return result, nil
 }
 
-// resolveCountryCode maps a maneuver's begin_shape_index to a country code
-// via the leg's nodes (which carry admin_index) and admins array.
-func resolveCountryCode(admins []struct {
-	CountryCode string `json:"country_code"`
-	CountryText string `json:"country_text"`
-}, nodes []struct {
-	AdminIndex int `json:"admin_index"`
-}, shapeIndex int) string {
-	if len(nodes) == 0 || len(admins) == 0 {
-		return ""
+// decodePolyline decodes a Google-style encoded polyline (precision 6 for Valhalla)
+// into a slice of [lat, lon] pairs.
+func decodePolyline(encoded string) [][2]float64 {
+	var points [][2]float64
+	index, lat, lng := 0, 0, 0
+
+	for index < len(encoded) {
+		// Decode latitude
+		shift, result := 0, 0
+		for {
+			b := int(encoded[index]) - 63
+			index++
+			result |= (b & 0x1f) << shift
+			shift += 5
+			if b < 0x20 {
+				break
+			}
+		}
+		if result&1 != 0 {
+			lat += ^(result >> 1)
+		} else {
+			lat += result >> 1
+		}
+
+		// Decode longitude
+		shift, result = 0, 0
+		for {
+			b := int(encoded[index]) - 63
+			index++
+			result |= (b & 0x1f) << shift
+			shift += 5
+			if b < 0x20 {
+				break
+			}
+		}
+		if result&1 != 0 {
+			lng += ^(result >> 1)
+		} else {
+			lng += result >> 1
+		}
+
+		points = append(points, [2]float64{float64(lat) / 1e6, float64(lng) / 1e6})
 	}
-	if shapeIndex >= len(nodes) {
-		shapeIndex = len(nodes) - 1
+	return points
+}
+
+// countryFromCoord returns ISO 3166-1 alpha-2 country code for a coordinate.
+// Uses bounding-box approximations for European countries relevant to toll calculation.
+// Order matters: smaller/enclosed countries are checked first.
+func countryFromCoord(lat, lon float64) string {
+	// Luxembourg (small, check first)
+	if lat >= 49.4 && lat <= 50.2 && lon >= 5.7 && lon <= 6.55 {
+		return "LU"
 	}
-	adminIdx := nodes[shapeIndex].AdminIndex
-	if adminIdx >= len(admins) {
-		return ""
+	// Belgium
+	if lat >= 49.5 && lat <= 51.55 && lon >= 2.5 && lon <= 6.4 {
+		return "BE"
 	}
-	return admins[adminIdx].CountryCode
+	// Netherlands
+	if lat >= 50.75 && lat <= 53.6 && lon >= 3.3 && lon <= 7.25 {
+		return "NL"
+	}
+	// Germany
+	if lat >= 47.2 && lat <= 55.1 && lon >= 5.8 && lon <= 15.1 {
+		return "DE"
+	}
+	// France
+	if lat >= 42.3 && lat <= 51.1 && lon >= -5.2 && lon <= 8.3 {
+		return "FR"
+	}
+	// Switzerland
+	if lat >= 45.8 && lat <= 47.85 && lon >= 5.9 && lon <= 10.5 {
+		return "CH"
+	}
+	// Austria
+	if lat >= 46.3 && lat <= 49.05 && lon >= 9.5 && lon <= 17.2 {
+		return "AT"
+	}
+	// Italy
+	if lat >= 36.6 && lat <= 47.1 && lon >= 6.6 && lon <= 18.6 {
+		return "IT"
+	}
+	// Spain
+	if lat >= 36.0 && lat <= 43.8 && lon >= -9.3 && lon <= 3.4 {
+		return "ES"
+	}
+	// Poland
+	if lat >= 49.0 && lat <= 54.85 && lon >= 14.1 && lon <= 24.2 {
+		return "PL"
+	}
+	// Czech Republic
+	if lat >= 48.55 && lat <= 51.06 && lon >= 12.1 && lon <= 18.9 {
+		return "CZ"
+	}
+	// Denmark
+	if lat >= 54.5 && lat <= 57.8 && lon >= 8.0 && lon <= 15.2 {
+		return "DK"
+	}
+	return ""
 }
