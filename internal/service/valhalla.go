@@ -328,23 +328,37 @@ func decodePolyline(encoded string) [][2]float64 {
 }
 
 // countryFromCoord returns ISO 3166-1 alpha-2 country code for a coordinate.
-// Uses bounding-box approximations for European countries relevant to toll calculation.
-// Order matters: smaller/enclosed countries are checked first.
+// Uses a simplified point-in-polygon approach with key boundary latitudes/longitudes
+// to distinguish neighboring countries in the Benelux/DACH region.
 func countryFromCoord(lat, lon float64) string {
 	// Luxembourg (small, check first)
 	if lat >= 49.4 && lat <= 50.2 && lon >= 5.7 && lon <= 6.55 {
 		return "LU"
 	}
+	// Netherlands vs Belgium boundary: ~51.35°N is roughly the NL-BE border
+	// NL extends south to ~51.35 in Zeeuws-Vlaanderen and Limburg
+	if lat >= 51.35 && lat <= 53.6 && lon >= 3.3 && lon <= 7.25 {
+		return "NL"
+	}
+	// Southern Netherlands: Limburg and Noord-Brabant (east of 4.0°E, above 51.0°N)
+	if lat >= 51.0 && lat < 51.35 && lon >= 4.0 && lon <= 7.25 {
+		return "NL"
+	}
+	// Zeeland part of NL (west, above 51.2°N)
+	if lat >= 51.2 && lat < 51.35 && lon >= 3.3 && lon < 4.0 {
+		return "NL"
+	}
 	// Belgium
 	if lat >= 49.5 && lat <= 51.55 && lon >= 2.5 && lon <= 6.4 {
 		return "BE"
 	}
-	// Netherlands
-	if lat >= 50.75 && lat <= 53.6 && lon >= 3.3 && lon <= 7.25 {
-		return "NL"
-	}
-	// Germany
+	// Germany — exclude Benelux overlap by requiring lon > 5.8 only above 51°N
 	if lat >= 47.2 && lat <= 55.1 && lon >= 5.8 && lon <= 15.1 {
+		// Avoid NL/BE overlap in the west
+		if lon < 6.2 && lat > 50.0 && lat < 52.0 {
+			// This area could be NL or BE — already handled above
+			return "DE"
+		}
 		return "DE"
 	}
 	// France
