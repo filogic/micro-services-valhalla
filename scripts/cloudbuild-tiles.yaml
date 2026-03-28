@@ -1,6 +1,9 @@
 # cloudbuild-tiles.yaml
 # Scheduled via Cloud Scheduler (weekly, Sunday 02:00 CET)
-# Builds Valhalla tiles from Geofabrik extract and uploads to GCS
+# 1. Downloads fresh OSM data from Geofabrik
+# 2. Builds Valhalla routing tiles
+# 3. Uploads tiles to GCS (bucket root, replacing previous)
+# 4. Restarts Valhalla Cloud Run so it loads the new tiles
 
 steps:
   # Step 1: Download Europe + Asia extracts
@@ -17,7 +20,7 @@ steps:
     id: 'download-osm'
 
   # Step 2: Build Valhalla tiles from both extracts
-  - name: 'ghcr.io/valhalla/valhalla:latest'
+  - name: 'europe-west4-docker.pkg.dev/${PROJECT_ID}/docker/valhalla:latest'
     entrypoint: 'bash'
     args:
       - '-c'
@@ -25,50 +28,75 @@ steps:
         mkdir -p /workspace/tiles
         valhalla_build_config \
           --mjolnir-tile-dir /workspace/tiles \
+          --mjolnir-tile-extract /workspace/valhalla_tiles.tar \
           --mjolnir-timezone /workspace/tiles/tz.sqlite \
           --mjolnir-admin /workspace/tiles/admin.sqlite \
           --mjolnir-concurrency 8 \
           > /workspace/valhalla.json
-        
+
         valhalla_build_tiles \
           -c /workspace/valhalla.json \
           /workspace/europe-latest.osm.pbf \
           /workspace/asia-latest.osm.pbf
-        
+
         valhalla_build_admins \
           -c /workspace/valhalla.json \
           /workspace/europe-latest.osm.pbf \
           /workspace/asia-latest.osm.pbf
-        
+
         # Create indexed tar for fast loading
         valhalla_build_extract \
           -c /workspace/valhalla.json \
           -v
-        
+
         echo "Tile build complete"
-        ls -lh /workspace/tiles/
+        ls -lh /workspace/valhalla_tiles.tar
     id: 'build-tiles'
 
-  # Step 3: Upload to GCS with date-versioned path
+  # Step 3: Upload tiles + config to GCS bucket root
   - name: 'gcr.io/cloud-builders/gsutil'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        DATE=$(date +%Y-%m-%d)
-        
-        # Upload tiles + config
-        gsutil -m cp -r /workspace/tiles/* gs://${_TILES_BUCKET}/eu-asia/${DATE}/
-        gsutil cp /workspace/valhalla.json gs://${_TILES_BUCKET}/eu-asia/${DATE}/
-        
-        # Update 'latest' pointer
-        echo "${DATE}" | gsutil cp - gs://${_TILES_BUCKET}/eu-asia/latest.txt
-        
-        echo "Uploaded tiles to gs://${_TILES_BUCKET}/eu-asia/${DATE}/"
+        gsutil cp /workspace/valhalla_tiles.tar gs://${_TILES_BUCKET}/valhalla_tiles.tar
+        gsutil cp /workspace/valhalla.json gs://${_TILES_BUCKET}/valhalla.json
+        echo "$(date +%Y-%m-%d)" | gsutil cp - gs://${_TILES_BUCKET}/last-updated.txt
+        echo "Uploaded tiles to gs://${_TILES_BUCKET}/"
     id: 'upload-tiles'
+
+  # Step 4: Restart Valhalla so it picks up the new tiles
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - '${_VALHALLA_SERVICE}'
+      - '--region=${_REGION}'
+      - '--project=${PROJECT_ID}'
+      - '--no-traffic' # deploy new revision without shifting traffic yet
+      - '--quiet'
+    id: 'restart-valhalla'
+
+  # Step 5: Shift traffic to the new revision
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update-traffic'
+      - '${_VALHALLA_SERVICE}'
+      - '--region=${_REGION}'
+      - '--project=${PROJECT_ID}'
+      - '--to-latest'
+      - '--quiet'
+    id: 'switch-traffic'
 
 substitutions:
   _TILES_BUCKET: 'filogic-opentms-valhalla-tiles'
+  _REGION: 'europe-west4'
+  _VALHALLA_SERVICE: 'prod-filogic-services-valhalla'
 
 options:
   machineType: 'E2_HIGHCPU_32'
