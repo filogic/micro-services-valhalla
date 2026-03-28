@@ -335,6 +335,181 @@ var countryPolygons = []countryPolygon{
 		{54.35, 22.78}, // Kaliningrad border
 		{54.38, 19.46}, // Elbląg / Vistula Lagoon
 	}},
+
+	// ── Hungary ──────────────────────────────────────────────────
+	{code: "HU", points: [][2]float64{
+		{48.58, 16.95}, // Bratislava/Rajka border
+		{48.01, 17.16}, // Komárom area
+		{47.40, 16.54}, // Szombathely
+		{46.87, 16.11}, // Szentgotthárd
+		{46.36, 16.30}, // Lenti
+		{46.00, 16.60}, // Letenye (Croatia border)
+		{45.80, 17.30}, // Barcs
+		{45.80, 18.00}, // Mohács area
+		{45.90, 18.90}, // Baja
+		{46.17, 19.90}, // Szeged area
+		{46.18, 20.80}, // Makó
+		{46.60, 21.24}, // Gyula
+		{47.36, 21.85}, // Debrecen area
+		{47.95, 22.37}, // Záhony
+		{48.40, 22.15}, // Beregsurány
+		{48.58, 21.43}, // Sátoraljaújhely
+		{48.57, 20.77}, // Aggtelek
+		{48.20, 19.80}, // Salgótarján
+		{47.85, 18.73}, // Esztergom
+		{48.10, 17.25}, // Győr area
+	}},
+
+	// ── Slovakia ─────────────────────────────────────────────────
+	{code: "SK", points: [][2]float64{
+		{48.78, 16.90}, // Bratislava NW
+		{48.69, 16.45}, // Holíč
+		{48.87, 15.03}, // Znojmo border
+		{49.07, 15.60}, // Jihlava border area
+		{49.50, 18.05}, // Ostrava border
+		{49.43, 18.96}, // Čadca
+		{49.30, 20.07}, // Tatras
+		{49.10, 20.60}, // Stará Ľubovňa
+		{48.90, 21.50}, // Košice area
+		{48.58, 21.43}, // Slovenské Nové Mesto
+		{48.40, 22.15}, // Uzhhorod border
+		{47.95, 22.37}, // Záhony
+		{47.75, 21.20}, // Tokaj area
+		{47.85, 18.73}, // Esztergom
+		{48.10, 17.25}, // Győr border
+		{48.01, 17.16}, // Danube bend
+		{48.58, 16.95}, // Bratislava
+	}},
+
+	// ── Slovenia ─────────────────────────────────────────────────
+	{code: "SI", points: [][2]float64{
+		{46.87, 16.11}, // Szentgotthárd border
+		{46.62, 15.64}, // Spielfeld/Šentilj
+		{46.52, 15.00}, // Dravograd
+		{46.52, 14.55}, // Karawanken N
+		{46.38, 14.08}, // Kranjska Gora
+		{46.28, 13.73}, // Bovec
+		{45.83, 13.58}, // Trieste area
+		{45.47, 13.60}, // Koper/Piran
+		{45.47, 14.25}, // Rijeka border
+		{45.50, 15.15}, // Metlika
+		{45.80, 15.70}, // Brežice
+		{46.36, 16.30}, // Lenti border
+	}},
+
+	// ── Portugal ─────────────────────────────────────────────────
+	{code: "PT", points: [][2]float64{
+		{42.10, -8.90}, // Viana do Castelo
+		{41.87, -8.87}, // Porto area
+		{41.10, -8.65}, // Aveiro
+		{40.20, -8.90}, // Coimbra coast
+		{39.35, -9.40}, // Nazaré
+		{38.78, -9.50}, // Lisboa coast
+		{38.50, -9.20}, // Setúbal
+		{37.95, -8.80}, // Sines
+		{37.02, -8.95}, // Sagres
+		{36.96, -7.85}, // Faro
+		{37.20, -7.40}, // Vila Real border
+		{38.90, -6.90}, // Badajoz border
+		{39.46, -7.53}, // Portalegre
+		{41.10, -6.93}, // Bragança border
+		{41.70, -7.18}, // Chaves
+		{41.87, -8.15}, // Braga area
+	}},
+
+	// ── Croatia ──────────────────────────────────────────────────
+	{code: "HR", points: [][2]float64{
+		{46.36, 16.30}, // Varaždin area
+		{46.00, 16.60}, // Čakovec
+		{45.80, 17.30}, // Virovitica
+		{45.80, 18.00}, // Osijek area
+		{45.20, 19.00}, // Vukovar
+		{44.85, 18.95}, // Brčko area
+		{45.00, 18.50}, // Slavonski Brod
+		{45.20, 17.70}, // Požega
+		{45.00, 16.50}, // Sisak
+		{44.30, 15.90}, // Knin
+		{43.50, 16.50}, // Split
+		{42.65, 18.10}, // Dubrovnik
+		{42.95, 17.25}, // Pelješac
+		{43.20, 16.60}, // Makarska
+		{43.80, 15.40}, // Zadar area
+		{44.50, 14.90}, // Rijeka
+		{45.47, 14.25}, // Koper border
+		{45.50, 15.15}, // Karlovac
+		{45.80, 15.70}, // Zagreb area
+	}},
+
+	// ── Bulgaria ─────────────────────────────────────────────────
+	{code: "BG", points: [][2]float64{
+		{44.22, 22.65}, // Vidin
+		{43.80, 22.40}, // Montana
+		{43.00, 22.90}, // Sofia area
+		{42.20, 22.95}, // Kyustendil
+		{41.38, 23.40}, // Petrich
+		{41.25, 24.30}, // Drama border
+		{41.40, 25.30}, // Xanthi border
+		{41.70, 26.00}, // Edirne border
+		{41.98, 26.60}, // Kapitan Andreevo
+		{42.10, 27.50}, // Malko Tarnovo
+		{42.70, 28.60}, // Burgas
+		{43.35, 28.60}, // Varna coast
+		{43.75, 28.55}, // Shabla
+		{44.00, 27.25}, // Silistra area
+		{44.22, 26.00}, // Ruse
+		{44.22, 24.00}, // Pleven area
+		{44.22, 22.65}, // back to Vidin
+	}},
+
+	// ── Romania ──────────────────────────────────────────────────
+	{code: "RO", points: [][2]float64{
+		{48.00, 24.60}, // Sighetu Marmației
+		{47.95, 22.37}, // Satu Mare
+		{47.10, 21.90}, // Oradea
+		{46.18, 20.80}, // Arad border
+		{45.90, 21.30}, // Timișoara area
+		{44.80, 21.30}, // Orșova
+		{44.22, 22.65}, // Calafat
+		{44.00, 24.00}, // Turnu Măgurele
+		{44.00, 26.00}, // Giurgiu
+		{44.05, 27.25}, // Ruse border
+		{43.75, 28.55}, // Mangalia
+		{44.18, 28.65}, // Constanța
+		{45.15, 29.70}, // Danube delta
+		{45.50, 28.70}, // Galați
+		{46.10, 28.30}, // Iași approach
+		{47.40, 27.00}, // Iași
+		{47.95, 26.60}, // Siret border
+		{48.30, 25.50}, // Cernăuți border
+	}},
+
+	// ── Sweden ───────────────────────────────────────────────────
+	{code: "SE", points: [][2]float64{
+		{55.35, 12.85}, // Malmö
+		{56.05, 12.70}, // Helsingborg
+		{56.65, 12.85}, // Halmstad
+		{57.70, 11.80}, // Göteborg
+		{58.60, 11.10}, // Strömstad
+		{59.40, 10.60}, // Norway border S
+		{61.00, 12.10}, // Norway border mid
+		{63.50, 12.30}, // Trondheim border area
+		{65.50, 13.80}, // Norway border N
+		{66.40, 15.50}, // Bodø area
+		{68.40, 18.40}, // Narvik area
+		{69.05, 20.50}, // Tromsø border
+		{69.10, 21.50}, // Kilpisjärvi
+		{67.85, 23.50}, // Pajala
+		{66.30, 24.00}, // Haparanda
+		{65.60, 22.20}, // Luleå
+		{63.80, 20.20}, // Umeå
+		{62.38, 17.30}, // Sundsvall
+		{60.70, 17.10}, // Gävle
+		{59.35, 18.10}, // Stockholm
+		{58.40, 16.50}, // Norrköping
+		{57.75, 16.65}, // Kalmar
+		{56.20, 15.65}, // Karlskrona
+		{55.60, 14.25}, // Ystad
+	}},
 }
 
 // countryFromCoord returns the ISO 3166-1 alpha-2 country code for the

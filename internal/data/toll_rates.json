@@ -34,5 +34,131 @@
       "EURO_III": 0.22, "EURO_IV": 0.21,
       "EURO_V": 0.20, "EURO_VI": 0.20, "EURO_VI_E": 0.20
     }
+  },
+  "AT": {
+    "country": "AT", "operator": "ASFINAG GO-Maut", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.448, "EURO_I": 0.448, "EURO_II": 0.448,
+      "EURO_III": 0.401, "EURO_IV": 0.378,
+      "EURO_V": 0.345, "EURO_VI": 0.218, "EURO_VI_E": 0.218
+    }
+  },
+  "CH": {
+    "country": "CH", "operator": "LSVA", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 1.00,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.0321, "EURO_I": 0.0321, "EURO_II": 0.0321,
+      "EURO_III": 0.0271, "EURO_IV": 0.0271,
+      "EURO_V": 0.0228, "EURO_VI": 0.0228, "EURO_VI_E": 0.0228
+    }
+  },
+  "IT": {
+    "country": "IT", "operator": "Autostrade per l'Italia", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.18, "EURO_I": 0.18, "EURO_II": 0.18,
+      "EURO_III": 0.17, "EURO_IV": 0.16,
+      "EURO_V": 0.15, "EURO_VI": 0.14, "EURO_VI_E": 0.14
+    }
+  },
+  "ES": {
+    "country": "ES", "operator": "Autopistas", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.30,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.14, "EURO_I": 0.14, "EURO_II": 0.14,
+      "EURO_III": 0.13, "EURO_IV": 0.12,
+      "EURO_V": 0.11, "EURO_VI": 0.10, "EURO_VI_E": 0.10
+    }
+  },
+  "PL": {
+    "country": "PL", "operator": "e-TOLL", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.232, "EURO_I": 0.232, "EURO_II": 0.232,
+      "EURO_III": 0.207, "EURO_IV": 0.207,
+      "EURO_V": 0.168, "EURO_VI": 0.168, "EURO_VI_E": 0.168
+    }
+  },
+  "CZ": {
+    "country": "CZ", "operator": "CzechToll", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.252, "EURO_I": 0.252, "EURO_II": 0.252,
+      "EURO_III": 0.218, "EURO_IV": 0.206,
+      "EURO_V": 0.176, "EURO_VI": 0.155, "EURO_VI_E": 0.155
+    }
+  },
+  "HU": {
+    "country": "HU", "operator": "HU-GO", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.197, "EURO_I": 0.197, "EURO_II": 0.197,
+      "EURO_III": 0.168, "EURO_IV": 0.168,
+      "EURO_V": 0.140, "EURO_VI": 0.125, "EURO_VI_E": 0.125
+    }
+  },
+  "SK": {
+    "country": "SK", "operator": "Emyto", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.213, "EURO_I": 0.213, "EURO_II": 0.213,
+      "EURO_III": 0.184, "EURO_IV": 0.184,
+      "EURO_V": 0.148, "EURO_VI": 0.120, "EURO_VI_E": 0.120
+    }
+  },
+  "SI": {
+    "country": "SI", "operator": "DarsGo", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.233, "EURO_I": 0.233, "EURO_II": 0.233,
+      "EURO_III": 0.198, "EURO_IV": 0.198,
+      "EURO_V": 0.165, "EURO_VI": 0.145, "EURO_VI_E": 0.145
+    }
+  },
+  "PT": {
+    "country": "PT", "operator": "Via Verde", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.40,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.16, "EURO_I": 0.16, "EURO_II": 0.16,
+      "EURO_III": 0.15, "EURO_IV": 0.14,
+      "EURO_V": 0.12, "EURO_VI": 0.11, "EURO_VI_E": 0.11
+    }
+  },
+  "BG": {
+    "country": "BG", "operator": "Toll System BG", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.145, "EURO_I": 0.145, "EURO_II": 0.145,
+      "EURO_III": 0.120, "EURO_IV": 0.120,
+      "EURO_V": 0.098, "EURO_VI": 0.087, "EURO_VI_E": 0.087
+    }
+  },
+  "RO": {
+    "country": "RO", "operator": "RO e-Toll", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.40,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.130, "EURO_I": 0.130, "EURO_II": 0.130,
+      "EURO_III": 0.110, "EURO_IV": 0.110,
+      "EURO_V": 0.088, "EURO_VI": 0.076, "EURO_VI_E": 0.076
+    }
+  },
+  "HR": {
+    "country": "HR", "operator": "HAC", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.155, "EURO_I": 0.155, "EURO_II": 0.155,
+      "EURO_III": 0.138, "EURO_IV": 0.138,
+      "EURO_V": 0.115, "EURO_VI": 0.105, "EURO_VI_E": 0.105
+    }
+  },
+  "SE": {
+    "country": "SE", "operator": "Infrastrukturavgift", "system": "distance",
+    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.30,
+    "ratesPerEuroClass": {
+      "EURO_0": 0.185, "EURO_I": 0.185, "EURO_II": 0.185,
+      "EURO_III": 0.156, "EURO_IV": 0.156,
+      "EURO_V": 0.130, "EURO_VI": 0.115, "EURO_VI_E": 0.115
+    }
   }
 }
