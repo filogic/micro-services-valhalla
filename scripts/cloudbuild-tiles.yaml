@@ -68,7 +68,7 @@ steps:
     id: 'upload-tiles'
 
 substitutions:
-  _TILES_BUCKET: 'viatiq-tiles'
+  _TILES_BUCKET: 'filogic-opentms-valhalla-tiles'
 
 options:
   machineType: 'E2_HIGHCPU_32'
