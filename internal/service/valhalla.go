@@ -66,9 +66,10 @@ type ValhallaLeg struct {
 }
 
 type ValhallaManeuver struct {
-	Length   float64
-	Time    float64
-	HasToll bool
+	Length      float64
+	Time        float64
+	HasToll     bool
+	CountryCode string // ISO 3166-1 alpha-2 (e.g., "NL", "DE")
 }
 
 func (c *ValhallaClient) GetRoute(ctx context.Context, req *model.RouteRequest) (*ValhallaResult, error) {
@@ -219,11 +220,19 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 					Time   float64 `json:"time"`
 					HasToll bool    `json:"has_toll"`
 				} `json:"summary"`
+				Admins []struct {
+					CountryCode string `json:"country_code"`
+					CountryText string `json:"country_text"`
+				} `json:"admins"`
+				Nodes []struct {
+					AdminIndex int `json:"admin_index"`
+				} `json:"nodes"`
 				Maneuvers []struct {
-					Length   float64 `json:"length"`
-					Time     float64 `json:"time"`
-					TollBooth bool   `json:"toll_booth"`
-					Toll     bool    `json:"toll"`
+					Length          float64 `json:"length"`
+					Time            float64 `json:"time"`
+					TollBooth       bool    `json:"toll_booth"`
+					Toll            bool    `json:"toll"`
+					BeginShapeIndex int     `json:"begin_shape_index"`
 				} `json:"maneuvers"`
 			} `json:"legs"`
 		} `json:"trip"`
@@ -251,10 +260,12 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 		}
 
 		for _, m := range leg.Maneuvers {
+			countryCode := resolveCountryCode(leg.Admins, leg.Nodes, m.BeginShapeIndex)
 			vl.Maneuvers = append(vl.Maneuvers, ValhallaManeuver{
-				Length:  m.Length * 1000,
-				Time:    m.Time,
-				HasToll: m.Toll || m.TollBooth,
+				Length:      m.Length * 1000,
+				Time:        m.Time,
+				HasToll:     m.Toll || m.TollBooth,
+				CountryCode: countryCode,
 			})
 		}
 
@@ -262,4 +273,25 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 	}
 
 	return result, nil
+}
+
+// resolveCountryCode maps a maneuver's begin_shape_index to a country code
+// via the leg's nodes (which carry admin_index) and admins array.
+func resolveCountryCode(admins []struct {
+	CountryCode string `json:"country_code"`
+	CountryText string `json:"country_text"`
+}, nodes []struct {
+	AdminIndex int `json:"admin_index"`
+}, shapeIndex int) string {
+	if len(nodes) == 0 || len(admins) == 0 {
+		return ""
+	}
+	if shapeIndex >= len(nodes) {
+		shapeIndex = len(nodes) - 1
+	}
+	adminIdx := nodes[shapeIndex].AdminIndex
+	if adminIdx >= len(admins) {
+		return ""
+	}
+	return admins[adminIdx].CountryCode
 }

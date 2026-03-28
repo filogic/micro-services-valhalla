@@ -82,21 +82,14 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 func (tc *TollCalculator) estimateCountryDistances(route *ValhallaResult) map[string]float64 {
 	distances := make(map[string]float64)
 
-	var totalTollDistance float64
 	for _, leg := range route.Legs {
 		for _, m := range leg.Maneuvers {
-			if m.HasToll {
-				totalTollDistance += m.Length
+			cc := m.CountryCode
+			if cc == "" {
+				continue
 			}
+			distances[cc] += m.Length
 		}
-	}
-
-	// V1: without admin boundary data, attribute toll distance to UNKNOWN.
-	// V2 will use Valhalla's admin info per edge for exact country splits.
-	if totalTollDistance > 0 {
-		distances["UNKNOWN"] = totalTollDistance
-	} else {
-		distances["UNKNOWN"] = route.Distance
 	}
 
 	return distances
