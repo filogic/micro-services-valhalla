@@ -1,164 +1,495 @@
 {
-  "NL": {
-    "country": "NL", "operator": "Vrachtwagenheffing", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.70,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.269, "EURO_I": 0.269, "EURO_II": 0.269,
-      "EURO_III": 0.228, "EURO_IV": 0.228,
-      "EURO_V": 0.169, "EURO_VI": 0.157, "EURO_VI_E": 0.157
-    }
-  },
   "DE": {
-    "country": "DE", "operator": "Toll Collect", "system": "distance",
-    "minWeightTonnes": 7.5, "tolledRoadFraction": 0.65,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.352, "EURO_I": 0.352, "EURO_II": 0.352,
-      "EURO_III": 0.318, "EURO_IV": 0.290,
-      "EURO_V": 0.275, "EURO_VI": 0.231, "EURO_VI_E": 0.192
+    "country": "DE",
+    "operator": "Toll Collect",
+    "system": "distance",
+    "minWeightTonnes": 7.5,
+    "tolledRoadFraction": 0.75,
+    "weightClasses": [
+      {
+        "min": 7.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.182, "EURO_I": 0.182, "EURO_II": 0.182,
+          "EURO_III": 0.157, "EURO_IV": 0.145,
+          "EURO_V": 0.137, "EURO_VI": 0.119, "EURO_VI_E": 0.119
+        }
+      },
+      {
+        "min": 12, "max": 18,
+        "rates": {
+          "EURO_0": 0.232, "EURO_I": 0.232, "EURO_II": 0.232,
+          "EURO_III": 0.200, "EURO_IV": 0.184,
+          "EURO_V": 0.173, "EURO_VI": 0.151, "EURO_VI_E": 0.151
+        }
+      },
+      {
+        "min": 18, "max": 9999,
+        "rates": {
+          "EURO_0": 0.352, "EURO_I": 0.352, "EURO_II": 0.352,
+          "EURO_III": 0.318, "EURO_IV": 0.290,
+          "EURO_V": 0.275, "EURO_VI": 0.269, "EURO_VI_E": 0.269
+        }
+      }
+    ]
+  },
+
+  "NL": {
+    "country": "NL",
+    "operator": "Vrachtwagenheffing",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 1.0,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.272, "EURO_I": 0.246, "EURO_II": 0.219,
+          "EURO_III": 0.193, "EURO_IV": 0.166,
+          "EURO_V": 0.139, "EURO_VI": 0.112, "EURO_VI_E": 0.112
+        }
+      },
+      {
+        "min": 12, "max": 18,
+        "rates": {
+          "EURO_0": 0.392, "EURO_I": 0.353, "EURO_II": 0.314,
+          "EURO_III": 0.274, "EURO_IV": 0.235,
+          "EURO_V": 0.196, "EURO_VI": 0.157, "EURO_VI_E": 0.157
+        }
+      },
+      {
+        "min": 18, "max": 32,
+        "rates": {
+          "EURO_0": 0.432, "EURO_I": 0.390, "EURO_II": 0.348,
+          "EURO_III": 0.305, "EURO_IV": 0.263,
+          "EURO_V": 0.221, "EURO_VI": 0.179, "EURO_VI_E": 0.179
+        }
+      },
+      {
+        "min": 32, "max": 9999,
+        "rates": {
+          "EURO_0": 0.487, "EURO_I": 0.438, "EURO_II": 0.389,
+          "EURO_III": 0.341, "EURO_IV": 0.293,
+          "EURO_V": 0.245, "EURO_VI": 0.197, "EURO_VI_E": 0.197
+        }
+      }
+    ],
+    "co2ClassRates": {
+      "2": [
+        { "min": 3.5, "max": 12, "rate": 0.103 },
+        { "min": 12, "max": 18, "rate": 0.145 },
+        { "min": 18, "max": 32, "rate": 0.166 },
+        { "min": 32, "max": 9999, "rate": 0.183 }
+      ],
+      "3": [
+        { "min": 3.5, "max": 12, "rate": 0.092 },
+        { "min": 12, "max": 18, "rate": 0.130 },
+        { "min": 18, "max": 32, "rate": 0.149 },
+        { "min": 32, "max": 9999, "rate": 0.165 }
+      ],
+      "4": [
+        { "min": 3.5, "max": 12, "rate": 0.063 },
+        { "min": 12, "max": 18, "rate": 0.088 },
+        { "min": 18, "max": 32, "rate": 0.100 },
+        { "min": 32, "max": 9999, "rate": 0.111 }
+      ],
+      "5": [
+        { "min": 3.5, "max": 12, "rate": 0.025 },
+        { "min": 12, "max": 18, "rate": 0.033 },
+        { "min": 18, "max": 32, "rate": 0.036 },
+        { "min": 32, "max": 9999, "rate": 0.038 }
+      ]
     }
   },
+
   "BE": {
-    "country": "BE", "operator": "Viapass", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.60,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.320, "EURO_I": 0.320, "EURO_II": 0.320,
-      "EURO_III": 0.280, "EURO_IV": 0.260,
-      "EURO_V": 0.220, "EURO_VI": 0.199, "EURO_VI_E": 0.183
-    }
+    "country": "BE",
+    "operator": "Viapass",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.70,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.113, "EURO_I": 0.113, "EURO_II": 0.113,
+          "EURO_III": 0.098, "EURO_IV": 0.080,
+          "EURO_V": 0.063, "EURO_VI": 0.046, "EURO_VI_E": 0.046
+        }
+      },
+      {
+        "min": 12, "max": 32,
+        "rates": {
+          "EURO_0": 0.148, "EURO_I": 0.148, "EURO_II": 0.148,
+          "EURO_III": 0.132, "EURO_IV": 0.089,
+          "EURO_V": 0.074, "EURO_VI": 0.060, "EURO_VI_E": 0.060
+        }
+      },
+      {
+        "min": 32, "max": 9999,
+        "rates": {
+          "EURO_0": 0.180, "EURO_I": 0.180, "EURO_II": 0.180,
+          "EURO_III": 0.155, "EURO_IV": 0.112,
+          "EURO_V": 0.094, "EURO_VI": 0.074, "EURO_VI_E": 0.074
+        }
+      }
+    ]
   },
+
   "FR": {
-    "country": "FR", "operator": "Autoroutes", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.22, "EURO_I": 0.22, "EURO_II": 0.22,
-      "EURO_III": 0.22, "EURO_IV": 0.21,
-      "EURO_V": 0.20, "EURO_VI": 0.20, "EURO_VI_E": 0.20
-    }
+    "country": "FR",
+    "operator": "Autoroutes",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.55,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.14, "EURO_I": 0.14, "EURO_II": 0.14,
+          "EURO_III": 0.14, "EURO_IV": 0.14,
+          "EURO_V": 0.14, "EURO_VI": 0.14, "EURO_VI_E": 0.14
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.22, "EURO_I": 0.22, "EURO_II": 0.22,
+          "EURO_III": 0.22, "EURO_IV": 0.21,
+          "EURO_V": 0.20, "EURO_VI": 0.20, "EURO_VI_E": 0.20
+        }
+      }
+    ]
   },
+
   "AT": {
-    "country": "AT", "operator": "ASFINAG GO-Maut", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.448, "EURO_I": 0.448, "EURO_II": 0.448,
-      "EURO_III": 0.401, "EURO_IV": 0.378,
-      "EURO_V": 0.345, "EURO_VI": 0.218, "EURO_VI_E": 0.218
-    }
+    "country": "AT",
+    "operator": "ASFINAG GO-Maut",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.60,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.290, "EURO_I": 0.290, "EURO_II": 0.290,
+          "EURO_III": 0.258, "EURO_IV": 0.243,
+          "EURO_V": 0.220, "EURO_VI": 0.175, "EURO_VI_E": 0.175
+        }
+      },
+      {
+        "min": 12, "max": 18,
+        "rates": {
+          "EURO_0": 0.393, "EURO_I": 0.393, "EURO_II": 0.393,
+          "EURO_III": 0.350, "EURO_IV": 0.330,
+          "EURO_V": 0.300, "EURO_VI": 0.218, "EURO_VI_E": 0.218
+        }
+      },
+      {
+        "min": 18, "max": 9999,
+        "rates": {
+          "EURO_0": 0.448, "EURO_I": 0.448, "EURO_II": 0.448,
+          "EURO_III": 0.401, "EURO_IV": 0.378,
+          "EURO_V": 0.345, "EURO_VI": 0.218, "EURO_VI_E": 0.218
+        }
+      }
+    ]
   },
+
   "CH": {
-    "country": "CH", "operator": "LSVA", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 1.00,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.0321, "EURO_I": 0.0321, "EURO_II": 0.0321,
-      "EURO_III": 0.0271, "EURO_IV": 0.0271,
-      "EURO_V": 0.0228, "EURO_VI": 0.0228, "EURO_VI_E": 0.0228
-    }
+    "country": "CH",
+    "operator": "LSVA",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 1.0,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 18,
+        "rates": {
+          "EURO_0": 0.0321, "EURO_I": 0.0321, "EURO_II": 0.0321,
+          "EURO_III": 0.0271, "EURO_IV": 0.0271,
+          "EURO_V": 0.0228, "EURO_VI": 0.0228, "EURO_VI_E": 0.0228
+        }
+      },
+      {
+        "min": 18, "max": 9999,
+        "rates": {
+          "EURO_0": 0.0321, "EURO_I": 0.0321, "EURO_II": 0.0321,
+          "EURO_III": 0.0271, "EURO_IV": 0.0271,
+          "EURO_V": 0.0228, "EURO_VI": 0.0228, "EURO_VI_E": 0.0228
+        }
+      }
+    ]
   },
+
   "IT": {
-    "country": "IT", "operator": "Autostrade per l'Italia", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.18, "EURO_I": 0.18, "EURO_II": 0.18,
-      "EURO_III": 0.17, "EURO_IV": 0.16,
-      "EURO_V": 0.15, "EURO_VI": 0.14, "EURO_VI_E": 0.14
-    }
+    "country": "IT",
+    "operator": "Autostrade per l'Italia",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.50,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.12, "EURO_I": 0.12, "EURO_II": 0.12,
+          "EURO_III": 0.12, "EURO_IV": 0.12,
+          "EURO_V": 0.12, "EURO_VI": 0.12, "EURO_VI_E": 0.12
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.18, "EURO_I": 0.18, "EURO_II": 0.18,
+          "EURO_III": 0.17, "EURO_IV": 0.16,
+          "EURO_V": 0.15, "EURO_VI": 0.14, "EURO_VI_E": 0.14
+        }
+      }
+    ]
   },
+
   "ES": {
-    "country": "ES", "operator": "Autopistas", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.30,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.14, "EURO_I": 0.14, "EURO_II": 0.14,
-      "EURO_III": 0.13, "EURO_IV": 0.12,
-      "EURO_V": 0.11, "EURO_VI": 0.10, "EURO_VI_E": 0.10
-    }
+    "country": "ES",
+    "operator": "Autopistas",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.30,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 9999,
+        "rates": {
+          "EURO_0": 0.14, "EURO_I": 0.14, "EURO_II": 0.14,
+          "EURO_III": 0.13, "EURO_IV": 0.12,
+          "EURO_V": 0.11, "EURO_VI": 0.10, "EURO_VI_E": 0.10
+        }
+      }
+    ]
   },
+
   "PL": {
-    "country": "PL", "operator": "e-TOLL", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.232, "EURO_I": 0.232, "EURO_II": 0.232,
-      "EURO_III": 0.207, "EURO_IV": 0.207,
-      "EURO_V": 0.168, "EURO_VI": 0.168, "EURO_VI_E": 0.168
-    }
+    "country": "PL",
+    "operator": "e-TOLL",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.50,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.162, "EURO_I": 0.162, "EURO_II": 0.162,
+          "EURO_III": 0.140, "EURO_IV": 0.140,
+          "EURO_V": 0.117, "EURO_VI": 0.117, "EURO_VI_E": 0.117
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.232, "EURO_I": 0.232, "EURO_II": 0.232,
+          "EURO_III": 0.207, "EURO_IV": 0.207,
+          "EURO_V": 0.168, "EURO_VI": 0.168, "EURO_VI_E": 0.168
+        }
+      }
+    ]
   },
+
   "CZ": {
-    "country": "CZ", "operator": "CzechToll", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.252, "EURO_I": 0.252, "EURO_II": 0.252,
-      "EURO_III": 0.218, "EURO_IV": 0.206,
-      "EURO_V": 0.176, "EURO_VI": 0.155, "EURO_VI_E": 0.155
-    }
+    "country": "CZ",
+    "operator": "CzechToll",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.55,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.176, "EURO_I": 0.176, "EURO_II": 0.176,
+          "EURO_III": 0.150, "EURO_IV": 0.143,
+          "EURO_V": 0.120, "EURO_VI": 0.107, "EURO_VI_E": 0.107
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.252, "EURO_I": 0.252, "EURO_II": 0.252,
+          "EURO_III": 0.218, "EURO_IV": 0.206,
+          "EURO_V": 0.176, "EURO_VI": 0.155, "EURO_VI_E": 0.155
+        }
+      }
+    ]
   },
+
   "HU": {
-    "country": "HU", "operator": "HU-GO", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.197, "EURO_I": 0.197, "EURO_II": 0.197,
-      "EURO_III": 0.168, "EURO_IV": 0.168,
-      "EURO_V": 0.140, "EURO_VI": 0.125, "EURO_VI_E": 0.125
-    }
+    "country": "HU",
+    "operator": "HU-GO",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.55,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.140, "EURO_I": 0.140, "EURO_II": 0.140,
+          "EURO_III": 0.120, "EURO_IV": 0.120,
+          "EURO_V": 0.098, "EURO_VI": 0.088, "EURO_VI_E": 0.088
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.197, "EURO_I": 0.197, "EURO_II": 0.197,
+          "EURO_III": 0.168, "EURO_IV": 0.168,
+          "EURO_V": 0.140, "EURO_VI": 0.125, "EURO_VI_E": 0.125
+        }
+      }
+    ]
   },
+
   "SK": {
-    "country": "SK", "operator": "Emyto", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.50,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.213, "EURO_I": 0.213, "EURO_II": 0.213,
-      "EURO_III": 0.184, "EURO_IV": 0.184,
-      "EURO_V": 0.148, "EURO_VI": 0.120, "EURO_VI_E": 0.120
-    }
+    "country": "SK",
+    "operator": "Emyto",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.50,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.150, "EURO_I": 0.150, "EURO_II": 0.150,
+          "EURO_III": 0.130, "EURO_IV": 0.130,
+          "EURO_V": 0.105, "EURO_VI": 0.085, "EURO_VI_E": 0.085
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.213, "EURO_I": 0.213, "EURO_II": 0.213,
+          "EURO_III": 0.184, "EURO_IV": 0.184,
+          "EURO_V": 0.148, "EURO_VI": 0.120, "EURO_VI_E": 0.120
+        }
+      }
+    ]
   },
+
   "SI": {
-    "country": "SI", "operator": "DarsGo", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.55,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.233, "EURO_I": 0.233, "EURO_II": 0.233,
-      "EURO_III": 0.198, "EURO_IV": 0.198,
-      "EURO_V": 0.165, "EURO_VI": 0.145, "EURO_VI_E": 0.145
-    }
+    "country": "SI",
+    "operator": "DarsGo",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.55,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 9999,
+        "rates": {
+          "EURO_0": 0.233, "EURO_I": 0.233, "EURO_II": 0.233,
+          "EURO_III": 0.198, "EURO_IV": 0.198,
+          "EURO_V": 0.165, "EURO_VI": 0.145, "EURO_VI_E": 0.145
+        }
+      }
+    ]
   },
+
   "PT": {
-    "country": "PT", "operator": "Via Verde", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.40,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.16, "EURO_I": 0.16, "EURO_II": 0.16,
-      "EURO_III": 0.15, "EURO_IV": 0.14,
-      "EURO_V": 0.12, "EURO_VI": 0.11, "EURO_VI_E": 0.11
-    }
+    "country": "PT",
+    "operator": "Via Verde",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.40,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 9999,
+        "rates": {
+          "EURO_0": 0.16, "EURO_I": 0.16, "EURO_II": 0.16,
+          "EURO_III": 0.15, "EURO_IV": 0.14,
+          "EURO_V": 0.12, "EURO_VI": 0.11, "EURO_VI_E": 0.11
+        }
+      }
+    ]
   },
+
   "BG": {
-    "country": "BG", "operator": "Toll System BG", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.145, "EURO_I": 0.145, "EURO_II": 0.145,
-      "EURO_III": 0.120, "EURO_IV": 0.120,
-      "EURO_V": 0.098, "EURO_VI": 0.087, "EURO_VI_E": 0.087
-    }
+    "country": "BG",
+    "operator": "Toll System BG",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.45,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.100, "EURO_I": 0.100, "EURO_II": 0.100,
+          "EURO_III": 0.085, "EURO_IV": 0.085,
+          "EURO_V": 0.068, "EURO_VI": 0.060, "EURO_VI_E": 0.060
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.145, "EURO_I": 0.145, "EURO_II": 0.145,
+          "EURO_III": 0.120, "EURO_IV": 0.120,
+          "EURO_V": 0.098, "EURO_VI": 0.087, "EURO_VI_E": 0.087
+        }
+      }
+    ]
   },
+
   "RO": {
-    "country": "RO", "operator": "RO e-Toll", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.40,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.130, "EURO_I": 0.130, "EURO_II": 0.130,
-      "EURO_III": 0.110, "EURO_IV": 0.110,
-      "EURO_V": 0.088, "EURO_VI": 0.076, "EURO_VI_E": 0.076
-    }
+    "country": "RO",
+    "operator": "RO e-Toll",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.40,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 12,
+        "rates": {
+          "EURO_0": 0.090, "EURO_I": 0.090, "EURO_II": 0.090,
+          "EURO_III": 0.078, "EURO_IV": 0.078,
+          "EURO_V": 0.062, "EURO_VI": 0.053, "EURO_VI_E": 0.053
+        }
+      },
+      {
+        "min": 12, "max": 9999,
+        "rates": {
+          "EURO_0": 0.130, "EURO_I": 0.130, "EURO_II": 0.130,
+          "EURO_III": 0.110, "EURO_IV": 0.110,
+          "EURO_V": 0.088, "EURO_VI": 0.076, "EURO_VI_E": 0.076
+        }
+      }
+    ]
   },
+
   "HR": {
-    "country": "HR", "operator": "HAC", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.45,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.155, "EURO_I": 0.155, "EURO_II": 0.155,
-      "EURO_III": 0.138, "EURO_IV": 0.138,
-      "EURO_V": 0.115, "EURO_VI": 0.105, "EURO_VI_E": 0.105
-    }
+    "country": "HR",
+    "operator": "HAC",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.45,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 9999,
+        "rates": {
+          "EURO_0": 0.155, "EURO_I": 0.155, "EURO_II": 0.155,
+          "EURO_III": 0.138, "EURO_IV": 0.138,
+          "EURO_V": 0.115, "EURO_VI": 0.105, "EURO_VI_E": 0.105
+        }
+      }
+    ]
   },
+
   "SE": {
-    "country": "SE", "operator": "Infrastrukturavgift", "system": "distance",
-    "minWeightTonnes": 3.5, "tolledRoadFraction": 0.30,
-    "ratesPerEuroClass": {
-      "EURO_0": 0.185, "EURO_I": 0.185, "EURO_II": 0.185,
-      "EURO_III": 0.156, "EURO_IV": 0.156,
-      "EURO_V": 0.130, "EURO_VI": 0.115, "EURO_VI_E": 0.115
-    }
+    "country": "SE",
+    "operator": "Infrastrukturavgift",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.30,
+    "weightClasses": [
+      {
+        "min": 3.5, "max": 9999,
+        "rates": {
+          "EURO_0": 0.185, "EURO_I": 0.185, "EURO_II": 0.185,
+          "EURO_III": 0.156, "EURO_IV": 0.156,
+          "EURO_V": 0.130, "EURO_VI": 0.115, "EURO_VI_E": 0.115
+        }
+      }
+    ]
   }
 }

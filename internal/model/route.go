@@ -51,6 +51,7 @@ type VehicleSpec struct {
 	Axles           *int       `json:"axles,omitempty"`
 	AxleLoad        *float64   `json:"axleLoad,omitempty"`        // tonnes per axle
 	EuroClass       *EuroClass `json:"euroClass,omitempty"`       // EURO_0..EURO_VI_E
+	CO2Class        *int       `json:"co2Class,omitempty"`        // 1-5 (DE/NL), default 1
 	FuelType        *string    `json:"fuelType,omitempty"`        // Diesel, LNG, Electric, etc.
 	Hazmat          bool       `json:"hazmat,omitempty"`
 	FuelConsumption *float64   `json:"fuelConsumption,omitempty"` // l/km override (GLEC Tier 2)
@@ -82,6 +83,16 @@ func (v *VehicleSpec) ValidateEuroClass() error {
 		return fmt.Errorf("invalid euroClass %q, valid values: %v", *v.EuroClass, ValidEuroClassValues())
 	}
 	return nil
+}
+
+// EffectiveCO2Class returns the vehicle's CO₂ emission class (1-5).
+// Class 1 is the default (most polluting / highest toll rate).
+// Classes 2-5 apply to newer vehicles with better CO₂ efficiency.
+func (v *VehicleSpec) EffectiveCO2Class() int {
+	if v != nil && v.CO2Class != nil && *v.CO2Class >= 1 && *v.CO2Class <= 5 {
+		return *v.CO2Class
+	}
+	return 1
 }
 
 func (v *VehicleSpec) EffectiveFuelType() string {
