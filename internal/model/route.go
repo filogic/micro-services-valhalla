@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // ── Request ──
 
 type RouteRequest struct {
@@ -16,17 +18,42 @@ type Coordinate struct {
 	Lon float64 `json:"lon"`
 }
 
+// EuroClass represents the Euro emission standard for a vehicle.
+type EuroClass string
+
+const (
+	EuroClass0   EuroClass = "EURO_0"
+	EuroClassI   EuroClass = "EURO_I"
+	EuroClassII  EuroClass = "EURO_II"
+	EuroClassIII EuroClass = "EURO_III"
+	EuroClassIV  EuroClass = "EURO_IV"
+	EuroClassV   EuroClass = "EURO_V"
+	EuroClassVI  EuroClass = "EURO_VI"
+	EuroClassVIE EuroClass = "EURO_VI_E"
+)
+
+var validEuroClasses = map[EuroClass]bool{
+	EuroClass0: true, EuroClassI: true, EuroClassII: true,
+	EuroClassIII: true, EuroClassIV: true, EuroClassV: true,
+	EuroClassVI: true, EuroClassVIE: true,
+}
+
+// ValidEuroClassValues returns a sorted list of accepted enum values.
+func ValidEuroClassValues() []string {
+	return []string{"EURO_0", "EURO_I", "EURO_II", "EURO_III", "EURO_IV", "EURO_V", "EURO_VI", "EURO_VI_E"}
+}
+
 type VehicleSpec struct {
-	Height          *float64 `json:"height,omitempty"`          // meters
-	Weight          *float64 `json:"weight,omitempty"`          // tonnes
-	Length          *float64 `json:"length,omitempty"`          // meters
-	Width           *float64 `json:"width,omitempty"`           // meters
-	Axles           *int     `json:"axles,omitempty"`
-	AxleLoad        *float64 `json:"axleLoad,omitempty"`        // tonnes per axle
-	EuroClass       *string  `json:"euroClass,omitempty"`       // EURO_0..EURO_VI_E
-	FuelType        *string  `json:"fuelType,omitempty"`        // Diesel, LNG, Electric, etc.
-	Hazmat          bool     `json:"hazmat,omitempty"`
-	FuelConsumption *float64 `json:"fuelConsumption,omitempty"` // l/km override (GLEC Tier 2)
+	Height          *float64   `json:"height,omitempty"`          // meters
+	Weight          *float64   `json:"weight,omitempty"`          // tonnes
+	Length          *float64   `json:"length,omitempty"`          // meters
+	Width           *float64   `json:"width,omitempty"`           // meters
+	Axles           *int       `json:"axles,omitempty"`
+	AxleLoad        *float64   `json:"axleLoad,omitempty"`        // tonnes per axle
+	EuroClass       *EuroClass `json:"euroClass,omitempty"`       // EURO_0..EURO_VI_E
+	FuelType        *string    `json:"fuelType,omitempty"`        // Diesel, LNG, Electric, etc.
+	Hazmat          bool       `json:"hazmat,omitempty"`
+	FuelConsumption *float64   `json:"fuelConsumption,omitempty"` // l/km override (GLEC Tier 2)
 }
 
 // RequiresTruckRouting returns true when any physical vehicle parameter
@@ -41,9 +68,20 @@ func (v *VehicleSpec) RequiresTruckRouting() bool {
 
 func (v *VehicleSpec) EffectiveEuroClass() string {
 	if v != nil && v.EuroClass != nil {
-		return *v.EuroClass
+		return string(*v.EuroClass)
 	}
 	return "EURO_VI"
+}
+
+// ValidateEuroClass returns an error if euroClass is set but not a valid enum value.
+func (v *VehicleSpec) ValidateEuroClass() error {
+	if v == nil || v.EuroClass == nil {
+		return nil
+	}
+	if !validEuroClasses[*v.EuroClass] {
+		return fmt.Errorf("invalid euroClass %q, valid values: %v", *v.EuroClass, ValidEuroClassValues())
+	}
+	return nil
 }
 
 func (v *VehicleSpec) EffectiveFuelType() string {
@@ -121,4 +159,16 @@ type TollSegment struct {
 	Distance  float64  `json:"distance"`
 	Cost      float64  `json:"cost"`
 	RatePerKm *float64 `json:"ratePerKm,omitempty"`
+}
+
+// TollResponse is returned by POST /api/v1/toll.
+type TollResponse struct {
+	Route RouteInfo   `json:"route"`
+	Toll  TollSummary `json:"toll"`
+}
+
+// CO2Response is returned by POST /api/v1/co2.
+type CO2Response struct {
+	Route           RouteInfo       `json:"route"`
+	CarbonFootprint CarbonFootprint `json:"carbonFootprint"`
 }

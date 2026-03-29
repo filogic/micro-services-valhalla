@@ -36,12 +36,16 @@ func Route(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/route":
 		routeHandler.ServeHTTP(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/toll":
+		routeHandler.ServeToll(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/co2":
+		routeHandler.ServeCO2(w, r)
 	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/health":
 		handler.HealthHandler(w, r)
 	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not found","endpoints":["/api/v1/route","/api/v1/health"]}`))
+		w.Write([]byte(`{"error":"not found","endpoints":["/api/v1/route","/api/v1/toll","/api/v1/co2","/api/v1/health"]}`))
 	}
 }
 
