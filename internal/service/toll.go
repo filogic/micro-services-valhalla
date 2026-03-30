@@ -190,17 +190,16 @@ func (tc *TollCalculator) estimateCountryDistancesDetailed(route *ValhallaResult
 			info := result[cc]
 			info.TotalDistance += m.Length
 
-			if cc == "NL" {
-				// Exact matching against official NL toll road list
-				if IsNLTollRoad(m.StreetNames) {
-					info.TolledDistance += m.Length
-				}
-			} else {
-				// For other countries, use fraction-based estimate
-				config, ok := tc.configs[cc]
-				if ok {
-					info.TolledDistance += m.Length * config.TolledRoadFraction
-				}
+			// Match each maneuver against the country's toll road registry.
+			// This uses exact road-number matching per country:
+			// - NL: official vrachtwagenheffing road list (80 roads)
+			// - DE: all Autobahn (A) + Bundesstraßen (B)
+			// - BE: motorways + selected N-roads (Viapass)
+			// - FR: all autoroutes (A)
+			// - CH: all roads (LSVA = 100%)
+			// - etc.
+			if IsTollRoad(cc, m.StreetNames) {
+				info.TolledDistance += m.Length
 			}
 
 			result[cc] = info
