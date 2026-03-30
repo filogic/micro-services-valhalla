@@ -34,15 +34,20 @@ steps:
           --mjolnir-concurrency 8 \
           > /workspace/valhalla.json
 
-        valhalla_build_tiles \
-          -c /workspace/valhalla.json \
-          /workspace/europe-latest.osm.pbf \
-          /workspace/asia-latest.osm.pbf
-
+        # IMPORTANT: build admins FIRST so country boundaries are
+        # embedded in the tiles (required for cross-border routing)
+        echo "=== Building admin database ==="
         valhalla_build_admins \
           -c /workspace/valhalla.json \
-          /workspace/europe-latest.osm.pbf \
-          /workspace/asia-latest.osm.pbf
+          /workspace/europe-latest.osm.pbf
+
+        echo "=== Admin DB ready ==="
+        ls -lh /workspace/tiles/admin.sqlite
+
+        echo "=== Building tiles (with admin data) ==="
+        valhalla_build_tiles \
+          -c /workspace/valhalla.json \
+          /workspace/europe-latest.osm.pbf
 
         # Create indexed tar for fast loading
         valhalla_build_extract \
