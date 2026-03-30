@@ -33,6 +33,18 @@ func init() {
 // Route is the Cloud Function entry point.
 // Deployed as: gcloud functions deploy viatiq-route --entry-point Route
 func Route(w http.ResponseWriter, r *http.Request) {
+	// CORS headers for browser-based clients (Angular, etc.)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Max-Age", "3600")
+
+	// Handle preflight
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	switch {
 	case r.Method == http.MethodPost && r.URL.Path == "/api/v1/route":
 		routeHandler.ServeHTTP(w, r)
