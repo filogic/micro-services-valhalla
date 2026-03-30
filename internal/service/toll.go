@@ -68,9 +68,9 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 	euroClass := vehicle.EffectiveEuroClass()
 	co2Class := vehicle.EffectiveCO2Class()
 
-	countryDistances := tc.estimateCountryDistances(route)
+	countryInfo := tc.estimateCountryDistancesDetailed(route)
 
-	for country, distance := range countryDistances {
+	for country, info := range countryInfo {
 		config, ok := tc.configs[country]
 		if !ok {
 			continue
@@ -98,17 +98,25 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 			continue
 		}
 
-		tollDistance := distance * config.TolledRoadFraction
+		tollDistance := info.TolledDistance
+		totalDistance := info.TotalDistance
 		cost := (tollDistance / 1000.0) * rate
+
+		tollFraction := 0.0
+		if totalDistance > 0 {
+			tollFraction = math.Round(tollDistance/totalDistance*100) / 100
+		}
 
 		ratePtr := rate
 		summary.Segments = append(summary.Segments, model.TollSegment{
-			Country:   country,
-			Operator:  config.Operator,
-			System:    config.System,
-			Distance:  math.Round(tollDistance),
-			Cost:      math.Round(cost*100) / 100,
-			RatePerKm: &ratePtr,
+			Country:       country,
+			Operator:      config.Operator,
+			System:        config.System,
+			Distance:      math.Round(tollDistance),
+			TotalDistance:  math.Round(totalDistance),
+			TollFraction:  tollFraction,
+			Cost:          math.Round(cost*100) / 100,
+			RatePerKm:     &ratePtr,
 		})
 	}
 
@@ -159,8 +167,18 @@ func findCO2Rate(rates []CO2WeightRate, weight float64) float64 {
 
 // ── Country-distance estimation ─────────────────────────────────────
 
-func (tc *TollCalculator) estimateCountryDistances(route *ValhallaResult) map[string]float64 {
-	distances := make(map[string]float64)
+// countryDistanceInfo holds both total and tolled distances for a country.
+type countryDistanceInfo struct {
+	TotalDistance  float64 // total meters in this country
+	TolledDistance float64 // meters on tolled roads
+}
+
+// estimateCountryDistancesDetailed returns per-country distance info.
+// For NL, it uses the official toll road registry to match individual
+// maneuver street names against the ~80 tolled road numbers.
+// For other countries, it applies the tolledRoadFraction estimate.
+func (tc *TollCalculator) estimateCountryDistancesDetailed(route *ValhallaResult) map[string]countryDistanceInfo {
+	result := make(map[string]countryDistanceInfo)
 
 	for _, leg := range route.Legs {
 		for _, m := range leg.Maneuvers {
@@ -168,11 +186,28 @@ func (tc *TollCalculator) estimateCountryDistances(route *ValhallaResult) map[st
 			if cc == "" {
 				continue
 			}
-			distances[cc] += m.Length
+
+			info := result[cc]
+			info.TotalDistance += m.Length
+
+			if cc == "NL" {
+				// Exact matching against official NL toll road list
+				if IsNLTollRoad(m.StreetNames) {
+					info.TolledDistance += m.Length
+				}
+			} else {
+				// For other countries, use fraction-based estimate
+				config, ok := tc.configs[cc]
+				if ok {
+					info.TolledDistance += m.Length * config.TolledRoadFraction
+				}
+			}
+
+			result[cc] = info
 		}
 	}
 
-	return distances
+	return result
 }
 
 // ── Rate loading ────────────────────────────────────────────────────

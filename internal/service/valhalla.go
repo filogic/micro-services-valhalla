@@ -70,6 +70,7 @@ type ValhallaManeuver struct {
 	Time            float64
 	HasToll         bool
 	CountryCode     string // ISO 3166-1 alpha-2 (e.g., "NL", "DE")
+	StreetNames     []string
 	BeginShapeIndex int
 	EndShapeIndex   int
 }
@@ -223,12 +224,14 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 					HasToll bool    `json:"has_toll"`
 				} `json:"summary"`
 				Maneuvers []struct {
-					Length          float64 `json:"length"`
-					Time            float64 `json:"time"`
-					TollBooth       bool    `json:"toll_booth"`
-					Toll            bool    `json:"toll"`
-					BeginShapeIndex int     `json:"begin_shape_index"`
-					EndShapeIndex   int     `json:"end_shape_index"`
+					Length           float64  `json:"length"`
+					Time             float64  `json:"time"`
+					TollBooth        bool     `json:"toll_booth"`
+					Toll             bool     `json:"toll"`
+					StreetNames      []string `json:"street_names"`
+					BeginStreetNames []string `json:"begin_street_names"`
+					BeginShapeIndex  int      `json:"begin_shape_index"`
+					EndShapeIndex    int      `json:"end_shape_index"`
 				} `json:"maneuvers"`
 			} `json:"legs"`
 		} `json:"trip"`
@@ -270,6 +273,7 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 				Time:            m.Time,
 				HasToll:         m.Toll || m.TollBooth,
 				CountryCode:     countryCode,
+				StreetNames:     m.StreetNames,
 				BeginShapeIndex: m.BeginShapeIndex,
 				EndShapeIndex:   m.EndShapeIndex,
 			})

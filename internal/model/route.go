@@ -164,12 +164,14 @@ type TollSummary struct {
 }
 
 type TollSegment struct {
-	Country   string   `json:"country"`
-	Operator  string   `json:"operator"`
-	System    string   `json:"system"` // distance, vignette, flat, bridge, tunnel
-	Distance  float64  `json:"distance"`
-	Cost      float64  `json:"cost"`
-	RatePerKm *float64 `json:"ratePerKm,omitempty"`
+	Country       string   `json:"country"`
+	Operator      string   `json:"operator"`
+	System        string   `json:"system"` // distance, vignette, flat, bridge, tunnel
+	Distance      float64  `json:"distance"`      // tolled meters
+	TotalDistance  float64  `json:"totalDistance"`  // total meters in this country
+	TollFraction  float64  `json:"tollFraction"`   // fraction of distance that is tolled (0.0-1.0)
+	Cost          float64  `json:"cost"`
+	RatePerKm     *float64 `json:"ratePerKm,omitempty"`
 }
 
 // TollResponse is returned by POST /api/v1/toll.
