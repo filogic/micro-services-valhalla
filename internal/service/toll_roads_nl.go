@@ -56,8 +56,8 @@ var nlMunicipalTollNames = []string{
 	"noorderbrug",    // Maastricht
 }
 
-// roadRefPattern matches road references like "A1", "N279", "A15/A20", "E35"
-var roadRefPattern = regexp.MustCompile(`(?i)\b([AN]\d{1,3})\b`)
+// nlRoadRefPattern matches road references like "A1", "N279", "A15/A20", "E35"
+var nlRoadRefPattern = regexp.MustCompile(`(?i)\b([AN]\d{1,3})\b`)
 
 // IsNLTollRoad checks whether any of the given street names correspond
 // to a road in the official NL vrachtwagenheffing road network.
@@ -73,7 +73,7 @@ func IsNLTollRoad(streetNames []string) bool {
 		upper := strings.ToUpper(name)
 
 		// Check road references (A1, N279, etc.)
-		matches := roadRefPattern.FindAllString(upper, -1)
+		matches := nlRoadRefPattern.FindAllString(upper, -1)
 		for _, m := range matches {
 			if nlTollRoads[strings.ToUpper(m)] {
 				return true
