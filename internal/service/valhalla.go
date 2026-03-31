@@ -22,7 +22,7 @@ func NewValhallaClient(baseURL string) *ValhallaClient {
 	return &ValhallaClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 15 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 	}
 }
