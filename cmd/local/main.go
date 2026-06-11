@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -17,8 +16,7 @@ func main() {
 		port = p
 	}
 
-	ctx := context.Background()
-	if err := funcframework.Start(ctx, port); err != nil {
+	if err := funcframework.Start(port); err != nil {
 		log.Fatalf("funcframework.Start: %v", err)
 	}
 }
