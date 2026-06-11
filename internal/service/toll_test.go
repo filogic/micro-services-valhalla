@@ -137,6 +137,30 @@ func TestCalculateBelowMinWeightHasNoToll(t *testing.T) {
 	}
 }
 
+// Real OSM data writes German (and some other) road refs with a space
+// ("A 3", "B 43") while Dutch refs have none ("A2"). Both must match.
+func TestIsTollRoadHandlesSpacedRefs(t *testing.T) {
+	cases := []struct {
+		country string
+		names   []string
+		want    bool
+	}{
+		{"DE", []string{"A 3"}, true},
+		{"DE", []string{"B 43"}, true},
+		{"DE", []string{"A3"}, true},
+		{"DE", []string{"Hans-Thoma-Straße"}, false},
+		{"NL", []string{"A2"}, true},
+		{"NL", []string{"Rijksweg A74"}, true},
+		{"BE", []string{"E 40"}, true},
+	}
+
+	for _, c := range cases {
+		if got := IsTollRoad(c.country, c.names); got != c.want {
+			t.Errorf("IsTollRoad(%s, %v): want %v, got %v", c.country, c.names, c.want, got)
+		}
+	}
+}
+
 func TestEncodePolylineRoundtrip(t *testing.T) {
 	points := [][2]float64{
 		{52.376234, 4.891567},

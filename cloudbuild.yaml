@@ -1,0 +1,28 @@
+# cloudbuild.yaml
+# Picked up automatically by the "micro-services-valhalla" Cloud Build
+# trigger (autodetect) on every push to main, deploying the Go Cloud
+# Function. Values mirror the live function configuration.
+
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'prod-filogic-services-route'
+      - '--gen2'
+      - '--runtime=go122'
+      - '--region=europe-west4'
+      - '--source=.'
+      - '--entry-point=Route'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--memory=256Mi'
+      - '--max-instances=100'
+      - '--timeout=120s'
+      - '--set-env-vars=VALHALLA_BASE_URL=https://prod-filogic-services-valhalla-jdpum4tpeq-ez.a.run.app'
+      - '--quiet'
+    id: 'deploy'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

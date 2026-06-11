@@ -56,15 +56,20 @@ func IsTollRoad(country string, streetNames []string) bool {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-// roadRefPattern extracts road references like "A1", "B42", "D1", "S7", "AP7"
-var roadRefPattern = regexp.MustCompile(`(?i)\b([A-Z]{1,2}\d{1,4}[A-Z]?)\b`)
+// roadRefPattern extracts road references like "A1", "B42", "D1", "S7", "AP7".
+// The number may be separated from the prefix by a space — German and other
+// OSM conventions write refs as "A 3" / "B 43" while Dutch refs are "A2".
+var roadRefPattern = regexp.MustCompile(`(?i)\b([A-Z]{1,2})\s?(\d{1,4}[A-Z]?)\b`)
 
-// extractRoadRefs finds all road reference numbers from street names.
+// extractRoadRefs finds all road reference numbers from street names,
+// normalized without spaces ("A 3" → "A3").
 func extractRoadRefs(streetNames []string) []string {
 	var refs []string
 	for _, name := range streetNames {
-		matches := roadRefPattern.FindAllString(strings.ToUpper(name), -1)
-		refs = append(refs, matches...)
+		matches := roadRefPattern.FindAllStringSubmatch(strings.ToUpper(name), -1)
+		for _, match := range matches {
+			refs = append(refs, match[1]+match[2])
+		}
 	}
 	return refs
 }
@@ -132,12 +137,12 @@ func matchesBelgium(streetNames []string) bool {
 			return true
 		}
 	}
-	// Also check E-road format in full street names (e.g., "E40/A10")
+	// Also check E-road format in full street names (e.g., "E40/A10", "E 40")
 	for _, name := range streetNames {
 		upper := strings.ToUpper(name)
-		matches := regexp.MustCompile(`\bE\d{1,3}\b`).FindAllString(upper, -1)
+		matches := regexp.MustCompile(`\bE\s?\d{1,3}\b`).FindAllString(upper, -1)
 		for _, m := range matches {
-			if data.BE_TollMotorways[m] {
+			if data.BE_TollMotorways[strings.ReplaceAll(m, " ", "")] {
 				return true
 			}
 		}
