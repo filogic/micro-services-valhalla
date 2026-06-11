@@ -197,6 +197,28 @@ func TestBuildEdgeManeuvers(t *testing.T) {
 	}
 }
 
+// Water crossings (Afsluitdijk) resolve to no country from the land
+// polygons and must inherit the country of the preceding stretch.
+func TestFillManeuverCountries(t *testing.T) {
+	maneuvers := []ValhallaManeuver{
+		{CountryCode: ""},
+		{CountryCode: "NL"},
+		{CountryCode: ""},
+		{CountryCode: ""},
+		{CountryCode: "NL"},
+		{CountryCode: "DE"},
+		{CountryCode: ""},
+	}
+	fillManeuverCountries(maneuvers)
+
+	want := []string{"NL", "NL", "NL", "NL", "NL", "DE", "DE"}
+	for i, m := range maneuvers {
+		if m.CountryCode != want[i] {
+			t.Errorf("maneuver %d: want %s, got %s", i, want[i], m.CountryCode)
+		}
+	}
+}
+
 // Real OSM data writes German (and some other) road refs with a space
 // ("A 3", "B 43") while Dutch refs have none ("A2"). Both must match.
 func TestIsTollRoadHandlesSpacedRefs(t *testing.T) {

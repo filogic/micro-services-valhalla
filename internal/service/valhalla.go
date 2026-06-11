@@ -260,7 +260,36 @@ func buildEdgeManeuvers(edges []traceEdge, points [][2]float64, legDuration floa
 		}
 		maneuvers = append(maneuvers, splitManeuverByCountry(m, points)...)
 	}
+	fillManeuverCountries(maneuvers)
 	return maneuvers
+}
+
+// fillManeuverCountries assigns a country to maneuvers that resolved to
+// none — typically water crossings like the Afsluitdijk (A7), which lie
+// outside the simplified land polygons. They inherit the country of the
+// preceding stretch; leading gaps take the first known country.
+func fillManeuverCountries(maneuvers []ValhallaManeuver) {
+	last := ""
+	for i := range maneuvers {
+		if maneuvers[i].CountryCode == "" {
+			maneuvers[i].CountryCode = last
+		} else {
+			last = maneuvers[i].CountryCode
+		}
+	}
+	first := ""
+	for i := range maneuvers {
+		if maneuvers[i].CountryCode != "" {
+			first = maneuvers[i].CountryCode
+			break
+		}
+	}
+	for i := range maneuvers {
+		if maneuvers[i].CountryCode != "" {
+			break
+		}
+		maneuvers[i].CountryCode = first
+	}
 }
 
 func (c *ValhallaClient) buildRequest(req *model.RouteRequest) map[string]any {
@@ -424,6 +453,7 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 				EndShapeIndex:   m.EndShapeIndex,
 			}, points)...)
 		}
+		fillManeuverCountries(vl.Maneuvers)
 
 		result.Legs = append(result.Legs, vl)
 	}
