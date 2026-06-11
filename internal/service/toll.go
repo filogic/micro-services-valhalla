@@ -56,7 +56,6 @@ func NewTollCalculator(dataPath string) *TollCalculator {
 
 func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.VehicleSpec) model.TollSummary {
 	summary := model.TollSummary{
-		Currency: "EUR",
 		Segments: []model.TollSegment{},
 	}
 
@@ -68,64 +67,128 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 	euroClass := vehicle.EffectiveEuroClass()
 	co2Class := vehicle.EffectiveCO2Class()
 
-	countryInfo := tc.estimateCountryDistancesDetailed(route)
-
-	for country, info := range countryInfo {
-		config, ok := tc.configs[country]
-		if !ok {
-			continue
+	// Resolve the EUR/km rate per country once; 0 means "not tolled
+	// for this vehicle" (no config, below MinWeightTonnes, or no rate).
+	rateCache := make(map[string]float64)
+	rateFor := func(country string) float64 {
+		if rate, ok := rateCache[country]; ok {
+			return rate
 		}
 
-		if weight < config.MinWeightTonnes {
-			continue
-		}
-
-		// 1. Try CO₂ class rates (NL/DE class 2-5: flat rate per weight bracket)
 		rate := 0.0
-		if co2Class > 1 && config.CO2ClassRates != nil {
-			classKey := fmt.Sprintf("%d", co2Class)
-			if classRates, ok := config.CO2ClassRates[classKey]; ok {
-				rate = findCO2Rate(classRates, weight)
+		if config, ok := tc.configs[country]; ok && weight >= config.MinWeightTonnes {
+			// 1. Try CO₂ class rates (NL/DE class 2-5: flat rate per weight bracket)
+			if co2Class > 1 && config.CO2ClassRates != nil {
+				classKey := fmt.Sprintf("%d", co2Class)
+				if classRates, ok := config.CO2ClassRates[classKey]; ok {
+					rate = findCO2Rate(classRates, weight)
+				}
+			}
+
+			// 2. Fall back to Euro-class rate from the matching weight class
+			if rate <= 0 {
+				rate = findWeightClassRate(config.WeightClasses, weight, euroClass)
+			}
+			if rate < 0 {
+				rate = 0
 			}
 		}
 
-		// 2. Fall back to Euro-class rate from the matching weight class
-		if rate <= 0 {
-			rate = findWeightClassRate(config.WeightClasses, weight, euroClass)
-		}
-
-		if rate <= 0 {
-			continue
-		}
-
-		tollDistance := info.TolledDistance
-		totalDistance := info.TotalDistance
-		cost := (tollDistance / 1000.0) * rate
-
-		tollFraction := 0.0
-		if totalDistance > 0 {
-			tollFraction = math.Round(tollDistance/totalDistance*100) / 100
-		}
-
-		ratePtr := rate
-		summary.Segments = append(summary.Segments, model.TollSegment{
-			Country:       country,
-			Operator:      config.Operator,
-			System:        config.System,
-			Distance:      math.Round(tollDistance),
-			TotalDistance:  math.Round(totalDistance),
-			TollFraction:  tollFraction,
-			Cost:          math.Round(cost*100) / 100,
-			RatePerKm:     &ratePtr,
-		})
+		rateCache[country] = rate
+		return rate
 	}
 
-	for _, seg := range summary.Segments {
-		summary.TotalCost += seg.Cost
+	// Walk the maneuvers and accumulate contiguous tolled stretches.
+	// A segment ends when a non-tolled maneuver, a country change or a
+	// leg boundary is encountered.
+	totalCost := 0.0
+
+	type openSegment struct {
+		country  string
+		rate     float64
+		distance float64 // meters
+		duration float64 // seconds
+		begin    int     // shape index into the leg polyline
+		end      int
 	}
-	summary.TotalCost = math.Round(summary.TotalCost*100) / 100
+
+	for _, leg := range route.Legs {
+		var cur *openSegment
+
+		flush := func() {
+			if cur == nil {
+				return
+			}
+			seg := *cur
+			cur = nil
+			if seg.distance <= 0 {
+				return
+			}
+
+			cost := (seg.distance / 1000.0) * seg.rate
+			totalCost += cost
+
+			rate := seg.rate
+			out := model.TollSegment{
+				Cost:      math.Round(cost*100) / 100,
+				Distance:  math.Round(seg.distance),
+				Duration:  math.Round(seg.duration*1000) / 1000,
+				RatePerKm: &rate,
+			}
+			if pts := sliceShape(leg.Points, seg.begin, seg.end); len(pts) >= 2 {
+				out.Polyline = encodePolyline(pts)
+			}
+
+			summary.TotalDistance += out.Distance
+			summary.Segments = append(summary.Segments, out)
+		}
+
+		for _, m := range leg.Maneuvers {
+			rate := 0.0
+			if m.CountryCode != "" && IsTollRoad(m.CountryCode, m.StreetNames) {
+				rate = rateFor(m.CountryCode)
+			}
+
+			if rate <= 0 {
+				flush()
+				continue
+			}
+			if cur != nil && cur.country != m.CountryCode {
+				flush()
+			}
+			if cur == nil {
+				cur = &openSegment{
+					country: m.CountryCode,
+					rate:    rate,
+					begin:   m.BeginShapeIndex,
+					end:     m.EndShapeIndex,
+				}
+			}
+			cur.distance += m.Length
+			cur.duration += m.Time
+			cur.end = m.EndShapeIndex
+		}
+		flush()
+	}
+
+	summary.TotalCost = math.Round(totalCost*100) / 100
 
 	return summary
+}
+
+// sliceShape returns the polyline points from begin to end (inclusive),
+// clamped to valid bounds.
+func sliceShape(points [][2]float64, begin, end int) [][2]float64 {
+	if begin < 0 {
+		begin = 0
+	}
+	if end > len(points)-1 {
+		end = len(points) - 1
+	}
+	if begin >= end {
+		return nil
+	}
+	return points[begin : end+1]
 }
 
 // ── Rate lookup helpers ─────────────────────────────────────────────
@@ -163,50 +226,6 @@ func findCO2Rate(rates []CO2WeightRate, weight float64) float64 {
 		return rates[len(rates)-1].Rate
 	}
 	return 0
-}
-
-// ── Country-distance estimation ─────────────────────────────────────
-
-// countryDistanceInfo holds both total and tolled distances for a country.
-type countryDistanceInfo struct {
-	TotalDistance  float64 // total meters in this country
-	TolledDistance float64 // meters on tolled roads
-}
-
-// estimateCountryDistancesDetailed returns per-country distance info.
-// For NL, it uses the official toll road registry to match individual
-// maneuver street names against the ~80 tolled road numbers.
-// For other countries, it applies the tolledRoadFraction estimate.
-func (tc *TollCalculator) estimateCountryDistancesDetailed(route *ValhallaResult) map[string]countryDistanceInfo {
-	result := make(map[string]countryDistanceInfo)
-
-	for _, leg := range route.Legs {
-		for _, m := range leg.Maneuvers {
-			cc := m.CountryCode
-			if cc == "" {
-				continue
-			}
-
-			info := result[cc]
-			info.TotalDistance += m.Length
-
-			// Match each maneuver against the country's toll road registry.
-			// This uses exact road-number matching per country:
-			// - NL: official vrachtwagenheffing road list (80 roads)
-			// - DE: all Autobahn (A) + Bundesstraßen (B)
-			// - BE: motorways + selected N-roads (Viapass)
-			// - FR: all autoroutes (A)
-			// - CH: all roads (LSVA = 100%)
-			// - etc.
-			if IsTollRoad(cc, m.StreetNames) {
-				info.TolledDistance += m.Length
-			}
-
-			result[cc] = info
-		}
-	}
-
-	return result
 }
 
 // ── Rate loading ────────────────────────────────────────────────────

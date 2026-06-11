@@ -90,15 +90,14 @@ curl -X POST http://localhost:5000/api/v1/route \
   },
   "toll": {
     "totalCost": 10.81,
-    "currency": "EUR",
+    "totalDistance": 68880,
     "segments": [
       {
-        "country": "NL",
-        "operator": "Vrachtwagenheffing",
-        "system": "Distance",
-        "distance": 68880,
         "cost": 10.81,
-        "ratePerKm": 0.157
+        "distance": 68880,
+        "duration": 2870.5,
+        "ratePerKm": 0.157,
+        "polyline": "..."
       }
     ]
   }

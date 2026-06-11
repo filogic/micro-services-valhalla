@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -62,6 +63,7 @@ type ValhallaLeg struct {
 	Distance   float64
 	Duration   float64
 	HasToll    bool
+	Points     [][2]float64 // decoded shape, indexed by maneuver Begin/EndShapeIndex
 	Maneuvers  []ValhallaManeuver
 }
 
@@ -259,7 +261,9 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 		}
 
 		// Decode polyline to get coordinates for country detection
+		// and per-segment polyline extraction in the toll calculator.
 		points := decodePolyline(leg.Shape)
+		vl.Points = points
 
 		for _, m := range leg.Maneuvers {
 			// Determine country from the midpoint of this maneuver's shape segment
@@ -329,5 +333,33 @@ func decodePolyline(encoded string) [][2]float64 {
 		points = append(points, [2]float64{float64(lat) / 1e6, float64(lng) / 1e6})
 	}
 	return points
+}
+
+// encodePolyline encodes [lat, lon] pairs into a Google-style encoded
+// polyline at precision 6, the inverse of decodePolyline.
+func encodePolyline(points [][2]float64) string {
+	var sb strings.Builder
+	prevLat, prevLng := 0, 0
+
+	for _, p := range points {
+		lat := int(math.Round(p[0] * 1e6))
+		lng := int(math.Round(p[1] * 1e6))
+		encodePolylineValue(&sb, lat-prevLat)
+		encodePolylineValue(&sb, lng-prevLng)
+		prevLat, prevLng = lat, lng
+	}
+	return sb.String()
+}
+
+func encodePolylineValue(sb *strings.Builder, v int) {
+	u := v << 1
+	if v < 0 {
+		u = ^u
+	}
+	for u >= 0x20 {
+		sb.WriteByte(byte(0x20|(u&0x1f)) + 63)
+		u >>= 5
+	}
+	sb.WriteByte(byte(u) + 63)
 }
 

@@ -158,20 +158,20 @@ type EmissionFactors struct {
 }
 
 type TollSummary struct {
-	TotalCost float64       `json:"totalCost"`
-	Currency  string        `json:"currency"`
-	Segments  []TollSegment `json:"segments"`
+	TotalCost     float64       `json:"totalCost"`
+	TotalDistance float64       `json:"totalDistance"` // tolled meters, sum of all segments
+	Segments      []TollSegment `json:"segments"`
 }
 
+// TollSegment is a contiguous tolled stretch of the route. A new segment
+// starts whenever the toll country changes or a non-tolled stretch is
+// passed in between.
 type TollSegment struct {
-	Country       string   `json:"country"`
-	Operator      string   `json:"operator"`
-	System        string   `json:"system"` // distance, vignette, flat, bridge, tunnel
-	Distance      float64  `json:"distance"`      // tolled meters
-	TotalDistance  float64  `json:"totalDistance"`  // total meters in this country
-	TollFraction  float64  `json:"tollFraction"`   // fraction of distance that is tolled (0.0-1.0)
-	Cost          float64  `json:"cost"`
-	RatePerKm     *float64 `json:"ratePerKm,omitempty"`
+	Cost      float64  `json:"cost"`
+	Distance  float64  `json:"distance"` // tolled meters
+	Duration  float64  `json:"duration"` // seconds spent on the tolled stretch
+	RatePerKm *float64 `json:"ratePerKm,omitempty"`
+	Polyline  string   `json:"polyline,omitempty"` // encoded polyline (precision 6) of the tolled stretch
 }
 
 // TollResponse is returned by POST /api/v1/toll.
