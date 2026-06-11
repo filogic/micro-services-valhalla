@@ -161,13 +161,63 @@ func (c *ValhallaClient) enrichLegsWithEdges(ctx context.Context, result *Valhal
 	return allEnriched
 }
 
+// traceMaxChunkMeters keeps each /trace_attributes request under
+// Valhalla's trace distance limit (200 km by default).
+const traceMaxChunkMeters = 150000.0
+
 func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costing string) bool {
 	if len(leg.Points) < 2 {
 		return false
 	}
 
-	shape := make([]map[string]float64, len(leg.Points))
-	for i, p := range leg.Points {
+	// Trace the leg in chunks (limit per request), then stitch the
+	// matched shapes and edges back together.
+	var points [][2]float64
+	var edges []traceEdge
+
+	for _, chunk := range splitPointsByDistance(leg.Points, traceMaxChunkMeters) {
+		trace, ok := c.traceChunk(ctx, leg.Points[chunk[0]:chunk[1]+1], costing)
+		if !ok {
+			return false
+		}
+
+		chunkPoints := decodePolyline(trace.Shape)
+		if len(chunkPoints) < 2 {
+			return false
+		}
+
+		offset := 0
+		if points == nil {
+			points = chunkPoints
+		} else {
+			// The chunk's first point repeats the previous chunk's last.
+			offset = len(points) - 1
+			points = append(points, chunkPoints[1:]...)
+		}
+		for _, e := range trace.Edges {
+			e.BeginShapeIndex += offset
+			e.EndShapeIndex += offset
+			edges = append(edges, e)
+		}
+	}
+
+	if len(edges) == 0 || len(points) < 2 {
+		return false
+	}
+
+	maneuvers := buildEdgeManeuvers(edges, points, leg.Duration)
+	if len(maneuvers) == 0 {
+		return false
+	}
+
+	leg.Points = points
+	leg.Maneuvers = maneuvers
+	return true
+}
+
+func (c *ValhallaClient) traceChunk(ctx context.Context, chunkPoints [][2]float64, costing string) (*traceResponse, bool) {
+	shape := make([]map[string]float64, len(chunkPoints))
+	for i, p := range chunkPoints {
 		shape[i] = map[string]float64{"lat": p[0], "lon": p[1]}
 	}
 
@@ -186,12 +236,12 @@ func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costin
 
 	jsonBytes, err := json.Marshal(traceReq)
 	if err != nil {
-		return false
+		return nil, false
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/trace_attributes", bytes.NewReader(jsonBytes))
 	if err != nil {
-		return false
+		return nil, false
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	if token, err := fetchIDToken(ctx, c.baseURL); err == nil {
@@ -200,46 +250,70 @@ func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costin
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return false
+		return nil, false
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		return false
+		return nil, false
 	}
 
 	var trace traceResponse
 	if err := json.Unmarshal(respBody, &trace); err != nil || len(trace.Edges) == 0 || trace.Shape == "" {
-		return false
+		return nil, false
 	}
+	return &trace, true
+}
 
-	points := decodePolyline(trace.Shape)
-	if len(points) < 2 {
-		return false
+// splitPointsByDistance returns [from, to] index ranges over the points,
+// each covering at most maxMeters of shape distance, with a one-point
+// overlap between consecutive ranges.
+func splitPointsByDistance(points [][2]float64, maxMeters float64) [][2]int {
+	var ranges [][2]int
+	start := 0
+	dist := 0.0
+	for i := 1; i < len(points); i++ {
+		dist += pointDistanceMeters(points[i-1], points[i])
+		if dist >= maxMeters {
+			ranges = append(ranges, [2]int{start, i})
+			start = i
+			dist = 0
+		}
 	}
-
-	maneuvers := buildEdgeManeuvers(trace.Edges, points, leg.Duration)
-	if len(maneuvers) == 0 {
-		return false
+	if start < len(points)-1 {
+		ranges = append(ranges, [2]int{start, len(points) - 1})
 	}
+	return ranges
+}
 
-	leg.Points = points
-	leg.Maneuvers = maneuvers
-	return true
+// pointDistanceMeters approximates the distance between two nearby
+// [lat, lon] points (equirectangular — adequate for adjacent shape points).
+func pointDistanceMeters(a, b [2]float64) float64 {
+	dLat := (b[0] - a[0]) * 111320
+	dLon := (b[1] - a[1]) * 111320 * math.Cos(a[0]*math.Pi/180)
+	return math.Sqrt(dLat*dLat + dLon*dLon)
 }
 
 // buildEdgeManeuvers converts trace edges into per-edge maneuvers with
-// country codes, scaling edge travel times so they sum to the leg duration.
+// country codes, scaling edge travel times so they sum to the leg
+// duration. Lengths are measured over the traversed shape — edge.length
+// is the full OSM edge, which overstates partially traversed edges
+// (route endpoints, chunk seams).
 func buildEdgeManeuvers(edges []traceEdge, points [][2]float64, legDuration float64) []ValhallaManeuver {
+	lengths := make([]float64, len(edges))
 	rawTimes := make([]float64, len(edges))
 	totalTime, totalLength := 0.0, 0.0
 	for i, e := range edges {
+		lengths[i] = shapeDistanceMeters(points, e.BeginShapeIndex, e.EndShapeIndex)
+		if lengths[i] <= 0 {
+			lengths[i] = e.Length * 1000
+		}
 		if e.Speed > 0 {
-			rawTimes[i] = e.Length / e.Speed * 3600
+			rawTimes[i] = lengths[i] / 1000 / e.Speed * 3600
 		}
 		totalTime += rawTimes[i]
-		totalLength += e.Length
+		totalLength += lengths[i]
 	}
 
 	var maneuvers []ValhallaManeuver
@@ -248,11 +322,11 @@ func buildEdgeManeuvers(edges []traceEdge, points [][2]float64, legDuration floa
 		if totalTime > 0 {
 			t = rawTimes[i] / totalTime * legDuration
 		} else if totalLength > 0 {
-			t = e.Length / totalLength * legDuration
+			t = lengths[i] / totalLength * legDuration
 		}
 
 		m := ValhallaManeuver{
-			Length:          e.Length * 1000,
+			Length:          lengths[i],
 			Time:            t,
 			StreetNames:     e.Names,
 			BeginShapeIndex: e.BeginShapeIndex,
@@ -262,6 +336,21 @@ func buildEdgeManeuvers(edges []traceEdge, points [][2]float64, legDuration floa
 	}
 	fillManeuverCountries(maneuvers)
 	return maneuvers
+}
+
+// shapeDistanceMeters sums the point-to-point distance over points[from..to].
+func shapeDistanceMeters(points [][2]float64, from, to int) float64 {
+	if from < 0 {
+		from = 0
+	}
+	if to > len(points)-1 {
+		to = len(points) - 1
+	}
+	total := 0.0
+	for i := from; i < to; i++ {
+		total += pointDistanceMeters(points[i], points[i+1])
+	}
+	return total
 }
 
 // fillManeuverCountries assigns a country to maneuvers that resolved to

@@ -192,8 +192,33 @@ func TestBuildEdgeManeuvers(t *testing.T) {
 	if math.Abs(totalTime-400) > 0.01 {
 		t.Errorf("times must sum to the leg duration: got %v", totalTime)
 	}
-	if math.Abs(totalLength-10300) > 0.5 {
-		t.Errorf("lengths: want 10300m, got %v", totalLength)
+	// Lengths are measured over the traversed shape geometry.
+	wantLength := shapeDistanceMeters(points, 0, 20)
+	if math.Abs(totalLength-wantLength) > 0.5 {
+		t.Errorf("lengths: want %v (shape distance), got %v", wantLength, totalLength)
+	}
+}
+
+func TestSplitPointsByDistance(t *testing.T) {
+	// ~1.3 km per step, 200 steps ≈ 260 km → expect multiple chunks under 150 km
+	points := makePoints(201)
+	ranges := splitPointsByDistance(points, 150000)
+
+	if len(ranges) < 2 {
+		t.Fatalf("expected multiple chunks, got %d", len(ranges))
+	}
+	if ranges[0][0] != 0 || ranges[len(ranges)-1][1] != 200 {
+		t.Errorf("chunks must cover the full range: %v", ranges)
+	}
+	for i := 1; i < len(ranges); i++ {
+		if ranges[i][0] != ranges[i-1][1] {
+			t.Errorf("chunks must overlap by one point: %v", ranges)
+		}
+	}
+	for _, r := range ranges {
+		if d := shapeDistanceMeters(points, r[0], r[1]); d > 160000 {
+			t.Errorf("chunk %v exceeds the distance limit: %v m", r, d)
+		}
 	}
 }
 
