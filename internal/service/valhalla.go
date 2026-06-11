@@ -266,27 +266,119 @@ func (c *ValhallaClient) parseResponse(body []byte, req *model.RouteRequest) (*V
 		vl.Points = points
 
 		for _, m := range leg.Maneuvers {
-			// Determine country from the midpoint of this maneuver's shape segment
-			countryCode := ""
-			midIdx := (m.BeginShapeIndex + m.EndShapeIndex) / 2
-			if midIdx < len(points) {
-				countryCode = countryFromCoord(points[midIdx][0], points[midIdx][1])
-			}
-			vl.Maneuvers = append(vl.Maneuvers, ValhallaManeuver{
+			vl.Maneuvers = append(vl.Maneuvers, splitManeuverByCountry(ValhallaManeuver{
 				Length:          m.Length * 1000,
 				Time:            m.Time,
 				HasToll:         m.Toll || m.TollBooth,
-				CountryCode:     countryCode,
 				StreetNames:     m.StreetNames,
 				BeginShapeIndex: m.BeginShapeIndex,
 				EndShapeIndex:   m.EndShapeIndex,
-			})
+			}, points)...)
 		}
 
 		result.Legs = append(result.Legs, vl)
 	}
 
 	return result, nil
+}
+
+// splitManeuverByCountry assigns countries to a maneuver by walking its
+// shape points and splits it where the country changes. A maneuver that
+// crosses a border (e.g. 34 km on the E19 from Breda into Antwerp) would
+// otherwise be attributed entirely to the country of its midpoint — or
+// to no country at all when that midpoint falls in a gap between the
+// simplified border polygons, silently dropping its toll.
+func splitManeuverByCountry(m ValhallaManeuver, points [][2]float64) []ValhallaManeuver {
+	begin, end := m.BeginShapeIndex, m.EndShapeIndex
+	if begin < 0 {
+		begin = 0
+	}
+	if end > len(points)-1 {
+		end = len(points) - 1
+	}
+	if end <= begin {
+		if begin >= 0 && begin < len(points) {
+			m.CountryCode = countryFromCoord(points[begin][0], points[begin][1])
+		}
+		return []ValhallaManeuver{m}
+	}
+
+	// Fast path: short maneuver with matching endpoint countries.
+	first := countryFromCoord(points[begin][0], points[begin][1])
+	last := countryFromCoord(points[end][0], points[end][1])
+	if first != "" && first == last && m.Length < 15000 {
+		m.CountryCode = first
+		return []ValhallaManeuver{m}
+	}
+
+	// Country per shape point. Points in gaps between the simplified
+	// border polygons inherit the previous known country; leading gaps
+	// take the first known country.
+	codes := make([]string, end-begin+1)
+	lastSeen := ""
+	for i := range codes {
+		code := countryFromCoord(points[begin+i][0], points[begin+i][1])
+		if code == "" {
+			code = lastSeen
+		}
+		codes[i] = code
+		lastSeen = code
+	}
+	firstKnown := ""
+	for _, code := range codes {
+		if code != "" {
+			firstKnown = code
+			break
+		}
+	}
+	for i := range codes {
+		if codes[i] != "" {
+			break
+		}
+		codes[i] = firstKnown
+	}
+
+	// Boundaries where the country changes.
+	boundaries := []int{begin}
+	for i := 1; i < len(codes); i++ {
+		if codes[i] != codes[i-1] {
+			boundaries = append(boundaries, begin+i)
+		}
+	}
+	boundaries = append(boundaries, end)
+	if len(boundaries) == 2 {
+		m.CountryCode = codes[0]
+		return []ValhallaManeuver{m}
+	}
+
+	// Apportion length and time over the parts by shape distance.
+	shapeDist := func(from, to int) float64 {
+		total := 0.0
+		for i := from; i < to; i++ {
+			dLat := points[i+1][0] - points[i][0]
+			dLon := (points[i+1][1] - points[i][1]) * math.Cos(points[i][0]*math.Pi/180)
+			total += math.Sqrt(dLat*dLat + dLon*dLon)
+		}
+		return total
+	}
+	totalDist := shapeDist(begin, end)
+
+	var parts []ValhallaManeuver
+	for b := 0; b < len(boundaries)-1; b++ {
+		from, to := boundaries[b], boundaries[b+1]
+		share := 1.0
+		if totalDist > 0 {
+			share = shapeDist(from, to) / totalDist
+		}
+		part := m
+		part.CountryCode = codes[from-begin]
+		part.Length = m.Length * share
+		part.Time = m.Time * share
+		part.BeginShapeIndex = from
+		part.EndShapeIndex = to
+		parts = append(parts, part)
+	}
+	return parts
 }
 
 // decodePolyline decodes a Google-style encoded polyline (precision 6 for Valhalla)

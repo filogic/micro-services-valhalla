@@ -151,6 +151,8 @@ func TestIsTollRoadHandlesSpacedRefs(t *testing.T) {
 		{"DE", []string{"Hans-Thoma-Straße"}, false},
 		{"NL", []string{"A2"}, true},
 		{"NL", []string{"Rijksweg A74"}, true},
+		{"NL", []string{"E19 E 19"}, true}, // A16 stretches carry only their E-number in OSM
+		{"NL", []string{"N629"}, false},
 		{"BE", []string{"E 40"}, true},
 	}
 
@@ -158,6 +160,54 @@ func TestIsTollRoadHandlesSpacedRefs(t *testing.T) {
 		if got := IsTollRoad(c.country, c.names); got != c.want {
 			t.Errorf("IsTollRoad(%s, %v): want %v, got %v", c.country, c.names, c.want, got)
 		}
+	}
+}
+
+// A single maneuver crossing the NL/BE border (E19 Breda → Antwerp) must
+// be split per country instead of being attributed to its midpoint —
+// which can fall in a gap between the simplified border polygons.
+func TestSplitManeuverByCountryAtBorder(t *testing.T) {
+	const n = 21
+	points := make([][2]float64, n)
+	for i := 0; i < n; i++ {
+		f := float64(i) / float64(n-1)
+		points[i] = [2]float64{51.59 - (51.59-51.26)*f, 4.78 - (4.78-4.43)*f} // Breda → Antwerp
+	}
+
+	parts := splitManeuverByCountry(ValhallaManeuver{
+		Length:          34000,
+		Time:            1200,
+		StreetNames:     []string{"E19"},
+		BeginShapeIndex: 0,
+		EndShapeIndex:   n - 1,
+	}, points)
+
+	if len(parts) < 2 {
+		t.Fatalf("expected the border-crossing maneuver to split, got %d part(s): %+v", len(parts), parts)
+	}
+	if parts[0].CountryCode != "NL" {
+		t.Errorf("first part: want NL, got %q", parts[0].CountryCode)
+	}
+	if parts[len(parts)-1].CountryCode != "BE" {
+		t.Errorf("last part: want BE, got %q", parts[len(parts)-1].CountryCode)
+	}
+
+	totalLength, totalTime := 0.0, 0.0
+	for i, part := range parts {
+		if part.CountryCode == "" {
+			t.Errorf("part %d has no country", i)
+		}
+		totalLength += part.Length
+		totalTime += part.Time
+		if i > 0 && parts[i-1].EndShapeIndex != part.BeginShapeIndex {
+			t.Errorf("parts %d/%d not contiguous: %d != %d", i-1, i, parts[i-1].EndShapeIndex, part.BeginShapeIndex)
+		}
+	}
+	if math.Abs(totalLength-34000) > 1 {
+		t.Errorf("lengths must sum to the original: got %v", totalLength)
+	}
+	if math.Abs(totalTime-1200) > 0.01 {
+		t.Errorf("times must sum to the original: got %v", totalTime)
 	}
 }
 

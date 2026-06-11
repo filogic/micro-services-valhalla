@@ -59,6 +59,12 @@ var nlMunicipalTollNames = []string{
 // nlRoadRefPattern matches road references like "A1", "N279", "A15/A20", "E35"
 var nlRoadRefPattern = regexp.MustCompile(`(?i)\b([AN]\d{1,3})\b`)
 
+// nlEuropeanRefPattern matches European route numbers ("E19", "E 35").
+// In the Netherlands every E-signed route runs on an A-weg, and all
+// A-wegen fall under the vrachtwagenheffing — some motorway stretches
+// (e.g. the A16 south of Breda) only carry their E-number in OSM.
+var nlEuropeanRefPattern = regexp.MustCompile(`(?i)\bE\s?\d{1,3}\b`)
+
 // IsNLTollRoad checks whether any of the given street names correspond
 // to a road in the official NL vrachtwagenheffing road network.
 //
@@ -78,6 +84,11 @@ func IsNLTollRoad(streetNames []string) bool {
 			if nlTollRoads[strings.ToUpper(m)] {
 				return true
 			}
+		}
+
+		// European route numbers always run on tolled A-wegen
+		if nlEuropeanRefPattern.MatchString(upper) {
+			return true
 		}
 
 		// Check municipal road names
