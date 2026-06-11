@@ -754,5 +754,158 @@
         }
       }
     ]
+  },
+  "BE-VLG": {
+    "country": "BE",
+    "operator": "Viapass (Vlaanderen)",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.7,
+    "weightClasses": [
+      {
+        "min": 3.5,
+        "max": 12,
+        "rates": {
+          "EURO_0": 0.158,
+          "EURO_I": 0.158,
+          "EURO_II": 0.158,
+          "EURO_III": 0.132,
+          "EURO_IV": 0.089,
+          "EURO_V": 0.074,
+          "EURO_VI": 0.06,
+          "EURO_VI_E": 0.06
+        }
+      },
+      {
+        "min": 12,
+        "max": 32,
+        "rates": {
+          "EURO_0": 0.268,
+          "EURO_I": 0.268,
+          "EURO_II": 0.268,
+          "EURO_III": 0.242,
+          "EURO_IV": 0.2,
+          "EURO_V": 0.184,
+          "EURO_VI": 0.171,
+          "EURO_VI_E": 0.171
+        }
+      },
+      {
+        "min": 32,
+        "max": 9999,
+        "rates": {
+          "EURO_0": 0.301,
+          "EURO_I": 0.301,
+          "EURO_II": 0.301,
+          "EURO_III": 0.275,
+          "EURO_IV": 0.233,
+          "EURO_V": 0.217,
+          "EURO_VI": 0.204,
+          "EURO_VI_E": 0.204
+        }
+      }
+    ]
+  },
+  "BE-WAL": {
+    "country": "BE",
+    "operator": "Viapass (Wallonie, excl. VAT)",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.7,
+    "weightClasses": [
+      {
+        "min": 3.5,
+        "max": 12,
+        "rates": {
+          "EURO_0": 0.113,
+          "EURO_I": 0.113,
+          "EURO_II": 0.113,
+          "EURO_III": 0.113,
+          "EURO_IV": 0.084,
+          "EURO_V": 0.07,
+          "EURO_VI": 0.056,
+          "EURO_VI_E": 0.056
+        }
+      },
+      {
+        "min": 12,
+        "max": 32,
+        "rates": {
+          "EURO_0": 0.22,
+          "EURO_I": 0.22,
+          "EURO_II": 0.22,
+          "EURO_III": 0.22,
+          "EURO_IV": 0.191,
+          "EURO_V": 0.177,
+          "EURO_VI": 0.163,
+          "EURO_VI_E": 0.163
+        }
+      },
+      {
+        "min": 32,
+        "max": 9999,
+        "rates": {
+          "EURO_0": 0.251,
+          "EURO_I": 0.251,
+          "EURO_II": 0.251,
+          "EURO_III": 0.251,
+          "EURO_IV": 0.222,
+          "EURO_V": 0.208,
+          "EURO_VI": 0.194,
+          "EURO_VI_E": 0.194
+        }
+      }
+    ]
+  },
+  "BE-BRU": {
+    "country": "BE",
+    "operator": "Viapass (Brussel, autosnelweg)",
+    "system": "distance",
+    "minWeightTonnes": 3.5,
+    "tolledRoadFraction": 0.7,
+    "weightClasses": [
+      {
+        "min": 3.5,
+        "max": 12,
+        "rates": {
+          "EURO_0": 0.192,
+          "EURO_I": 0.192,
+          "EURO_II": 0.192,
+          "EURO_III": 0.166,
+          "EURO_IV": 0.125,
+          "EURO_V": 0.11,
+          "EURO_VI": 0.097,
+          "EURO_VI_E": 0.097
+        }
+      },
+      {
+        "min": 12,
+        "max": 32,
+        "rates": {
+          "EURO_0": 0.258,
+          "EURO_I": 0.258,
+          "EURO_II": 0.258,
+          "EURO_III": 0.231,
+          "EURO_IV": 0.191,
+          "EURO_V": 0.176,
+          "EURO_VI": 0.163,
+          "EURO_VI_E": 0.163
+        }
+      },
+      {
+        "min": 32,
+        "max": 9999,
+        "rates": {
+          "EURO_0": 0.263,
+          "EURO_I": 0.263,
+          "EURO_II": 0.263,
+          "EURO_III": 0.237,
+          "EURO_IV": 0.196,
+          "EURO_V": 0.181,
+          "EURO_VI": 0.168,
+          "EURO_VI_E": 0.168
+        }
+      }
+    ]
   }
 }

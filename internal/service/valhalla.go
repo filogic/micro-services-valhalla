@@ -566,14 +566,14 @@ func splitManeuverByCountry(m ValhallaManeuver, points [][2]float64) []ValhallaM
 	}
 	if end <= begin {
 		if begin >= 0 && begin < len(points) {
-			m.CountryCode = countryFromCoord(points[begin][0], points[begin][1])
+			m.CountryCode = regionAwareCountry(points[begin][0], points[begin][1])
 		}
 		return []ValhallaManeuver{m}
 	}
 
 	// Fast path: short maneuver with matching endpoint countries.
-	first := countryFromCoord(points[begin][0], points[begin][1])
-	last := countryFromCoord(points[end][0], points[end][1])
+	first := regionAwareCountry(points[begin][0], points[begin][1])
+	last := regionAwareCountry(points[end][0], points[end][1])
 	if first != "" && first == last && m.Length < 15000 {
 		m.CountryCode = first
 		return []ValhallaManeuver{m}
@@ -585,7 +585,7 @@ func splitManeuverByCountry(m ValhallaManeuver, points [][2]float64) []ValhallaM
 	codes := make([]string, end-begin+1)
 	lastSeen := ""
 	for i := range codes {
-		code := countryFromCoord(points[begin+i][0], points[begin+i][1])
+		code := regionAwareCountry(points[begin+i][0], points[begin+i][1])
 		if code == "" {
 			code = lastSeen
 		}

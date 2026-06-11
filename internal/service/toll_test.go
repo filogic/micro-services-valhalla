@@ -222,6 +222,51 @@ func TestSplitPointsByDistance(t *testing.T) {
 	}
 }
 
+// Belgian toll tariffs differ per region; coordinates must classify
+// into Flanders, Wallonia or Brussels.
+func TestBelgianRegion(t *testing.T) {
+	cases := []struct {
+		name     string
+		lat, lon float64
+		want     string
+	}{
+		{"Antwerp", 51.2194, 4.4025, "BE-VLG"},
+		{"Kortrijk", 50.8280, 3.2649, "BE-VLG"},
+		{"Leuven", 50.8790, 4.7009, "BE-VLG"},
+		{"Tongeren", 50.7810, 5.4640, "BE-VLG"},
+		{"Mons", 50.4542, 3.9523, "BE-WAL"},
+		{"Liège", 50.6326, 5.5797, "BE-WAL"},
+		{"Waterloo", 50.7150, 4.4000, "BE-WAL"},
+		{"Wavre", 50.7170, 4.6100, "BE-WAL"},
+		{"Brussels", 50.8503, 4.3517, "BE-BRU"},
+	}
+	for _, c := range cases {
+		if got := belgianRegion(c.lat, c.lon); got != c.want {
+			t.Errorf("%s: want %s, got %s", c.name, c.want, got)
+		}
+	}
+}
+
+// A Wallonia maneuver must price at the Walloon tariff, not Flanders'.
+func TestCalculateUsesRegionalBelgianRates(t *testing.T) {
+	route := &ValhallaResult{
+		Legs: []ValhallaLeg{{
+			Points: makePoints(11),
+			Maneuvers: []ValhallaManeuver{
+				{Length: 10000, Time: 360, CountryCode: "BE-WAL", StreetNames: []string{"E 42"}, BeginShapeIndex: 0, EndShapeIndex: 10},
+			},
+		}},
+	}
+
+	summary := newTestCalculator().Calculate(route, truckSpec(40))
+	if len(summary.Segments) != 1 {
+		t.Fatalf("expected 1 segment, got %d", len(summary.Segments))
+	}
+	if *summary.Segments[0].RatePerKm != 0.194 {
+		t.Errorf("Wallonia rate: want 0.194, got %v", *summary.Segments[0].RatePerKm)
+	}
+}
+
 // Water crossings (Afsluitdijk) resolve to no country from the land
 // polygons and must inherit the country of the preceding stretch.
 func TestFillManeuverCountries(t *testing.T) {
@@ -295,8 +340,8 @@ func TestSplitManeuverByCountryAtBorder(t *testing.T) {
 	if parts[0].CountryCode != "NL" {
 		t.Errorf("first part: want NL, got %q", parts[0].CountryCode)
 	}
-	if parts[len(parts)-1].CountryCode != "BE" {
-		t.Errorf("last part: want BE, got %q", parts[len(parts)-1].CountryCode)
+	if parts[len(parts)-1].CountryCode != "BE-VLG" {
+		t.Errorf("last part: want BE-VLG (Antwerp side), got %q", parts[len(parts)-1].CountryCode)
 	}
 
 	totalLength, totalTime := 0.0, 0.0

@@ -512,6 +512,45 @@ var countryPolygons = []countryPolygon{
 	}},
 }
 
+// regionAwareCountry returns the country code for the coordinate,
+// refined to the toll region for countries with regional tariffs:
+// Belgium's kilometerheffing differs per region (BE-VLG/BE-WAL/BE-BRU).
+func regionAwareCountry(lat, lon float64) string {
+	code := countryFromCoord(lat, lon)
+	if code == "BE" {
+		return belgianRegion(lat, lon)
+	}
+	return code
+}
+
+// belgianRegion classifies a Belgian coordinate into its toll region.
+// The Brussels-Capital Region is approximated by its bounding box; the
+// Flanders/Wallonia language border by a piecewise latitude line —
+// adequate for motorways, which rarely hug the border.
+func belgianRegion(lat, lon float64) string {
+	if lat >= 50.760 && lat <= 50.913 && lon >= 4.245 && lon <= 4.482 {
+		return "BE-BRU"
+	}
+
+	border := 50.76
+	switch {
+	case lon < 3.2:
+		border = 50.74
+	case lon < 4.6:
+		border = 50.72
+	case lon < 5.0:
+		border = 50.73
+	case lon < 5.6:
+		border = 50.75
+	case lon < 5.9:
+		border = 50.72
+	}
+	if lat >= border {
+		return "BE-VLG"
+	}
+	return "BE-WAL"
+}
+
 // countryFromCoord returns the ISO 3166-1 alpha-2 country code for the
 // given latitude/longitude, or an empty string when the point does not
 // fall inside any of the known polygons.

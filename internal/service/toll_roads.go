@@ -21,7 +21,7 @@ func IsTollRoad(country string, streetNames []string) bool {
 		return matchesFrance(streetNames)
 	case "AT":
 		return matchesExactList(streetNames, data.AT_TollRoads)
-	case "BE":
+	case "BE", "BE-VLG", "BE-WAL", "BE-BRU":
 		return matchesBelgium(streetNames)
 	case "IT":
 		return matchesExactList(streetNames, data.IT_TollRoads)
