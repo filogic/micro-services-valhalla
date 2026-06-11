@@ -159,7 +159,7 @@ GLEC Framework v3 / ISO 14083 compliant:
 **API** — Cloud Function (2nd gen), schaalt naar nul:
 ```bash
 gcloud functions deploy viatiq-route \
-  --gen2 --runtime=go122 --region=europe-west4 \
+  --gen2 --runtime=go126 --region=europe-west4 \
   --source=. --entry-point=Route \
   --trigger-http --allow-unauthenticated \
   --memory=128Mi --min-instances=0 --max-instances=100

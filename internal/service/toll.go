@@ -261,21 +261,21 @@ func (tc *TollCalculator) defaultRates() map[string]TollConfig {
 			Country: "DE", Operator: "Toll Collect", System: "distance",
 			MinWeightTonnes: 7.5, TolledRoadFraction: 0.75,
 			WeightClasses: []WeightClassRate{
-				{Min: 7.5, Max: 9999, Rates: allEuro(0.269)},
+				{Min: 7.5, Max: 9999, Rates: allEuro(0.348)},
 			},
 		},
 		"NL": {
 			Country: "NL", Operator: "Vrachtwagenheffing", System: "distance",
 			MinWeightTonnes: 3.5, TolledRoadFraction: 1.0,
 			WeightClasses: []WeightClassRate{
-				{Min: 3.5, Max: 9999, Rates: allEuro(0.197)},
+				{Min: 3.5, Max: 9999, Rates: allEuro(0.201)},
 			},
 		},
 		"BE": {
 			Country: "BE", Operator: "Viapass", System: "distance",
 			MinWeightTonnes: 3.5, TolledRoadFraction: 0.70,
 			WeightClasses: []WeightClassRate{
-				{Min: 3.5, Max: 9999, Rates: allEuro(0.074)},
+				{Min: 3.5, Max: 9999, Rates: allEuro(0.204)},
 			},
 		},
 		"FR": {

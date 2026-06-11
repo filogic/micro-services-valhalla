@@ -8,7 +8,7 @@ import (
 )
 
 // newTestCalculator returns a calculator backed by the hard-coded
-// default rates (NL 0.197, DE 0.269, BE 0.074, FR 0.20).
+// default rates (NL 0.201, DE 0.348, BE 0.204, FR 0.20).
 func newTestCalculator() *TollCalculator {
 	return NewTollCalculator("/nonexistent-path-forces-default-rates")
 }
@@ -58,9 +58,9 @@ func TestCalculateBuildsContiguousSegments(t *testing.T) {
 		begin     int
 		end       int
 	}{
-		{distance: 8000, duration: 300, cost: 1.58, ratePerKm: 0.197, begin: 0, end: 20},
-		{distance: 2000, duration: 60, cost: 0.39, ratePerKm: 0.197, begin: 25, end: 30},
-		{distance: 4000, duration: 150, cost: 1.08, ratePerKm: 0.269, begin: 30, end: 40},
+		{distance: 8000, duration: 300, cost: 1.61, ratePerKm: 0.201, begin: 0, end: 20},
+		{distance: 2000, duration: 60, cost: 0.4, ratePerKm: 0.201, begin: 25, end: 30},
+		{distance: 4000, duration: 150, cost: 1.39, ratePerKm: 0.348, begin: 30, end: 40},
 	}
 
 	leg := route.Legs[0]
@@ -96,9 +96,9 @@ func TestCalculateBuildsContiguousSegments(t *testing.T) {
 	if summary.TotalDistance != 14000 {
 		t.Errorf("totalDistance: want 14000, got %v", summary.TotalDistance)
 	}
-	// 1.576 + 0.394 + 1.076 = 3.046 → 3.05 (rounded once at the end)
-	if summary.TotalCost != 3.05 {
-		t.Errorf("totalCost: want 3.05, got %v", summary.TotalCost)
+	// 1.608 + 0.402 + 1.392 = 3.402 → 3.4 (rounded once at the end)
+	if summary.TotalCost != 3.4 {
+		t.Errorf("totalCost: want 3.4, got %v", summary.TotalCost)
 	}
 }
 

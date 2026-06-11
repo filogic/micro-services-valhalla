@@ -11,7 +11,7 @@ steps:
       - 'deploy'
       - 'prod-filogic-services-route'
       - '--gen2'
-      - '--runtime=go122'
+      - '--runtime=go126'
       - '--region=europe-west4'
       - '--source=.'
       - '--entry-point=Route'
