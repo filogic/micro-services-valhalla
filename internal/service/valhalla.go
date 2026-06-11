@@ -56,7 +56,10 @@ type ValhallaResult struct {
 	Duration         float64
 	Polyline         string
 	UsedTruckCosting bool
-	Legs             []ValhallaLeg
+	// EdgeEnriched is true when the legs carry edge-level road data from
+	// /trace_attributes instead of maneuver-level data from /route.
+	EdgeEnriched bool
+	Legs         []ValhallaLeg
 }
 
 type ValhallaLeg struct {
@@ -111,7 +114,153 @@ func (c *ValhallaClient) GetRoute(ctx context.Context, req *model.RouteRequest) 
 		return nil, fmt.Errorf("valhalla returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	return c.parseResponse(respBody, req)
+	result, err := c.parseResponse(respBody, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Maneuver street names only reflect the road where a maneuver starts:
+	// a single "stay on" maneuver can cover 100+ km across several roads
+	// (e.g. A31 → A7 over the Afsluitdijk), hiding tolled roads from the
+	// toll matcher. Enrich the legs with edge-level road data; on failure
+	// the maneuver-level data remains as fallback.
+	costing := "auto"
+	if result.UsedTruckCosting {
+		costing = "truck"
+	}
+	result.EdgeEnriched = c.enrichLegsWithEdges(ctx, result, costing)
+
+	return result, nil
+}
+
+// ── Edge-level enrichment via /trace_attributes ─────────────────────
+
+type traceEdge struct {
+	Names           []string `json:"names"`
+	Length          float64  `json:"length"` // km
+	Speed           float64  `json:"speed"`  // km/h
+	BeginShapeIndex int      `json:"begin_shape_index"`
+	EndShapeIndex   int      `json:"end_shape_index"`
+}
+
+type traceResponse struct {
+	Edges []traceEdge `json:"edges"`
+	Shape string      `json:"shape"`
+}
+
+// enrichLegsWithEdges replaces each leg's maneuvers with per-edge road
+// data from /trace_attributes, giving exact road refs for every stretch.
+// Returns true when every leg was enriched.
+func (c *ValhallaClient) enrichLegsWithEdges(ctx context.Context, result *ValhallaResult, costing string) bool {
+	allEnriched := true
+	for i := range result.Legs {
+		if !c.enrichLeg(ctx, &result.Legs[i], costing) {
+			allEnriched = false
+		}
+	}
+	return allEnriched
+}
+
+func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costing string) bool {
+	if len(leg.Points) < 2 {
+		return false
+	}
+
+	shape := make([]map[string]float64, len(leg.Points))
+	for i, p := range leg.Points {
+		shape[i] = map[string]float64{"lat": p[0], "lon": p[1]}
+	}
+
+	traceReq := map[string]any{
+		"shape":       shape,
+		"costing":     costing,
+		"shape_match": "walk_or_snap",
+		"filters": map[string]any{
+			"attributes": []string{
+				"edge.names", "edge.length", "edge.speed",
+				"edge.begin_shape_index", "edge.end_shape_index", "shape",
+			},
+			"action": "include",
+		},
+	}
+
+	jsonBytes, err := json.Marshal(traceReq)
+	if err != nil {
+		return false
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/trace_attributes", bytes.NewReader(jsonBytes))
+	if err != nil {
+		return false
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	if token, err := fetchIDToken(ctx, c.baseURL); err == nil {
+		httpReq.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	var trace traceResponse
+	if err := json.Unmarshal(respBody, &trace); err != nil || len(trace.Edges) == 0 || trace.Shape == "" {
+		return false
+	}
+
+	points := decodePolyline(trace.Shape)
+	if len(points) < 2 {
+		return false
+	}
+
+	maneuvers := buildEdgeManeuvers(trace.Edges, points, leg.Duration)
+	if len(maneuvers) == 0 {
+		return false
+	}
+
+	leg.Points = points
+	leg.Maneuvers = maneuvers
+	return true
+}
+
+// buildEdgeManeuvers converts trace edges into per-edge maneuvers with
+// country codes, scaling edge travel times so they sum to the leg duration.
+func buildEdgeManeuvers(edges []traceEdge, points [][2]float64, legDuration float64) []ValhallaManeuver {
+	rawTimes := make([]float64, len(edges))
+	totalTime, totalLength := 0.0, 0.0
+	for i, e := range edges {
+		if e.Speed > 0 {
+			rawTimes[i] = e.Length / e.Speed * 3600
+		}
+		totalTime += rawTimes[i]
+		totalLength += e.Length
+	}
+
+	var maneuvers []ValhallaManeuver
+	for i, e := range edges {
+		t := rawTimes[i]
+		if totalTime > 0 {
+			t = rawTimes[i] / totalTime * legDuration
+		} else if totalLength > 0 {
+			t = e.Length / totalLength * legDuration
+		}
+
+		m := ValhallaManeuver{
+			Length:          e.Length * 1000,
+			Time:            t,
+			StreetNames:     e.Names,
+			BeginShapeIndex: e.BeginShapeIndex,
+			EndShapeIndex:   e.EndShapeIndex,
+		}
+		maneuvers = append(maneuvers, splitManeuverByCountry(m, points)...)
+	}
+	return maneuvers
 }
 
 func (c *ValhallaClient) buildRequest(req *model.RouteRequest) map[string]any {

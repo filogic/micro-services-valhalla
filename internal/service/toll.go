@@ -143,6 +143,13 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 			summary.Segments = append(summary.Segments, out)
 		}
 
+		// Short non-tolled stretches inside a tolled run (unnamed ramps,
+		// junction connectors — common with edge-level data) are bridged
+		// into the segment instead of splitting it.
+		const maxBridgeGapMeters = 600.0
+		gapLength, gapDuration := 0.0, 0.0
+		gapEnd := 0
+
 		for _, m := range leg.Maneuvers {
 			rate := 0.0
 			if m.CountryCode != "" && IsTollRoad(m.CountryCode, m.StreetNames) {
@@ -150,11 +157,26 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 			}
 
 			if rate <= 0 {
-				flush()
+				if cur != nil {
+					gapLength += m.Length
+					gapDuration += m.Time
+					gapEnd = m.EndShapeIndex
+					if gapLength >= maxBridgeGapMeters {
+						flush()
+						gapLength, gapDuration = 0, 0
+					}
+				}
 				continue
 			}
 			if cur != nil && cur.country != m.CountryCode {
 				flush()
+				gapLength, gapDuration = 0, 0
+			}
+			if cur != nil && gapLength > 0 {
+				cur.distance += gapLength
+				cur.duration += gapDuration
+				cur.end = gapEnd
+				gapLength, gapDuration = 0, 0
 			}
 			if cur == nil {
 				cur = &openSegment{

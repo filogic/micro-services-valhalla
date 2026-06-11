@@ -137,6 +137,66 @@ func TestCalculateBelowMinWeightHasNoToll(t *testing.T) {
 	}
 }
 
+// A short non-tolled stretch (unnamed ramp/connector) inside a tolled
+// run must be bridged into the segment; a long one must split it.
+func TestCalculateBridgesShortGapsOnly(t *testing.T) {
+	makeRoute := func(gapMeters float64) *ValhallaResult {
+		return &ValhallaResult{
+			Legs: []ValhallaLeg{{
+				Points: makePoints(31),
+				Maneuvers: []ValhallaManeuver{
+					{Length: 5000, Time: 180, CountryCode: "NL", StreetNames: []string{"A2"}, BeginShapeIndex: 0, EndShapeIndex: 10},
+					{Length: gapMeters, Time: 20, CountryCode: "NL", StreetNames: nil, BeginShapeIndex: 10, EndShapeIndex: 15},
+					{Length: 4000, Time: 150, CountryCode: "NL", StreetNames: []string{"A12"}, BeginShapeIndex: 15, EndShapeIndex: 30},
+				},
+			}},
+		}
+	}
+
+	bridged := newTestCalculator().Calculate(makeRoute(300), truckSpec(40))
+	if len(bridged.Segments) != 1 {
+		t.Fatalf("300m gap: expected 1 bridged segment, got %d", len(bridged.Segments))
+	}
+	if bridged.Segments[0].Distance != 9300 {
+		t.Errorf("bridged distance: want 9300 (incl. gap), got %v", bridged.Segments[0].Distance)
+	}
+
+	split := newTestCalculator().Calculate(makeRoute(1500), truckSpec(40))
+	if len(split.Segments) != 2 {
+		t.Fatalf("1500m gap: expected 2 segments, got %d", len(split.Segments))
+	}
+}
+
+// Edge-level data must map to maneuvers with scaled times and country codes.
+func TestBuildEdgeManeuvers(t *testing.T) {
+	points := makePoints(21)
+	edges := []traceEdge{
+		{Names: []string{"A2"}, Length: 6, Speed: 100, BeginShapeIndex: 0, EndShapeIndex: 10},
+		{Names: nil, Length: 0.3, Speed: 60, BeginShapeIndex: 10, EndShapeIndex: 12},
+		{Names: []string{"A12"}, Length: 4, Speed: 100, BeginShapeIndex: 12, EndShapeIndex: 20},
+	}
+
+	maneuvers := buildEdgeManeuvers(edges, points, 400)
+	if len(maneuvers) != 3 {
+		t.Fatalf("expected 3 maneuvers, got %d", len(maneuvers))
+	}
+
+	totalTime, totalLength := 0.0, 0.0
+	for _, m := range maneuvers {
+		totalTime += m.Time
+		totalLength += m.Length
+		if m.CountryCode != "NL" {
+			t.Errorf("expected NL country, got %q", m.CountryCode)
+		}
+	}
+	if math.Abs(totalTime-400) > 0.01 {
+		t.Errorf("times must sum to the leg duration: got %v", totalTime)
+	}
+	if math.Abs(totalLength-10300) > 0.5 {
+		t.Errorf("lengths: want 10300m, got %v", totalLength)
+	}
+}
+
 // Real OSM data writes German (and some other) road refs with a space
 // ("A 3", "B 43") while Dutch refs have none ("A2"). Both must match.
 func TestIsTollRoadHandlesSpacedRefs(t *testing.T) {
