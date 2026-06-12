@@ -130,7 +130,29 @@ func (c *ValhallaClient) GetRoute(ctx context.Context, req *model.RouteRequest) 
 	}
 	result.EdgeEnriched = c.enrichLegsWithEdges(ctx, result, costing)
 
+	// The toll segment polylines are sliced from the trace-matched shape,
+	// which can deviate a few meters from the /route polyline (e.g. on
+	// dual carriageways). Serve the matched shape as the route polyline
+	// so the route line and its toll sections share identical geometry.
+	if result.EdgeEnriched {
+		result.Polyline = combinedLegPolyline(result.Legs)
+	}
+
 	return result, nil
+}
+
+// combinedLegPolyline encodes the legs' shape points as one polyline,
+// dropping the duplicated boundary point between consecutive legs.
+func combinedLegPolyline(legs []ValhallaLeg) string {
+	var points [][2]float64
+	for i, leg := range legs {
+		p := leg.Points
+		if i > 0 && len(p) > 0 {
+			p = p[1:]
+		}
+		points = append(points, p...)
+	}
+	return encodePolyline(points)
 }
 
 // ── Edge-level enrichment via /trace_attributes ─────────────────────
