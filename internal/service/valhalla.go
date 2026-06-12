@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/filogic/micro-services-valhalla/internal/model"
@@ -192,14 +193,31 @@ func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costin
 		return false
 	}
 
-	// Trace the leg in chunks (limit per request), then stitch the
-	// matched shapes and edges back together.
+	// Trace the leg in chunks (limit per request) concurrently, then
+	// stitch the matched shapes and edges back together in order.
+	chunks := splitPointsByDistance(leg.Points, traceMaxChunkMeters)
+	traces := make([]*traceResponse, len(chunks))
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 4)
+	for i, chunk := range chunks {
+		wg.Add(1)
+		go func(i int, from, to int) {
+			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			if trace, ok := c.traceChunk(ctx, leg.Points[from:to+1], costing); ok {
+				traces[i] = trace
+			}
+		}(i, chunk[0], chunk[1])
+	}
+	wg.Wait()
+
 	var points [][2]float64
 	var edges []traceEdge
 
-	for _, chunk := range splitPointsByDistance(leg.Points, traceMaxChunkMeters) {
-		trace, ok := c.traceChunk(ctx, leg.Points[chunk[0]:chunk[1]+1], costing)
-		if !ok {
+	for _, trace := range traces {
+		if trace == nil {
 			return false
 		}
 
