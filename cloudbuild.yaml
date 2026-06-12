@@ -24,5 +24,24 @@ steps:
       - '--quiet'
     id: 'deploy'
 
+  # Pre-warm the function and Valhalla's tile cache for the main
+  # corridors (NL, NL→DE, NL→BE), so the first user request after a
+  # deploy doesn't pay container boot + tile loading.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        URL="https://europe-west4-filogic-opentms.cloudfunctions.net/prod-filogic-services-route/api/v1/route"
+        warm() {
+          curl -s -o /dev/null -w "warmup $1: %{http_code} in %{time_total}s\n" --max-time 120             -X POST "$URL" -H 'Content-Type: application/json' -d "$2" || true
+        }
+        warm "NL"    '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":51.44,"lon":5.47},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
+        warm "NL-DE" '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":48.14,"lon":11.57},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
+        warm "NL-BE" '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":50.63,"lon":5.58},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
+        warm "NL-N"  '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":53.30,"lon":5.79},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
+    id: 'warmup'
+    waitFor: ['deploy']
+
 options:
   logging: CLOUD_LOGGING_ONLY
