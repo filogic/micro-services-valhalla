@@ -34,7 +34,7 @@ steps:
       - |
         URL="https://europe-west4-filogic-opentms.cloudfunctions.net/prod-filogic-services-route/api/v1/route"
         warm() {
-          curl -s -o /dev/null -w "warmup $1: %{http_code} in %{time_total}s\n" --max-time 120             -X POST "$URL" -H 'Content-Type: application/json' -d "$2" || true
+          curl -s -o /dev/null -w "warmup $$1: %{http_code} in %{time_total}s\n" --max-time 120             -X POST "$$URL" -H 'Content-Type: application/json' -d "$$2" || true
         }
         warm "NL"    '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":51.44,"lon":5.47},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
         warm "NL-DE" '{"origin":{"lat":52.39,"lon":4.65},"destination":{"lat":48.14,"lon":11.57},"vehicle":{"weight":40,"euroClass":"EURO_VI"}}'
