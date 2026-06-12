@@ -199,7 +199,7 @@ func (c *ValhallaClient) enrichLeg(ctx context.Context, leg *ValhallaLeg, costin
 	traces := make([]*traceResponse, len(chunks))
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 4)
+	semaphore := make(chan struct{}, 8)
 	for i, chunk := range chunks {
 		wg.Add(1)
 		go func(i int, from, to int) {
