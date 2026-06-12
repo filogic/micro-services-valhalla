@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -15,6 +16,7 @@ type RouteHandler struct {
 	valhalla *service.ValhallaClient
 	toll     *service.TollCalculator
 	co2      *service.CO2Calculator
+	cache    *responseCache
 	logger   *slog.Logger
 }
 
@@ -23,40 +25,75 @@ func NewRouteHandler(valhallaURL, dataPath string, logger *slog.Logger) *RouteHa
 		valhalla: service.NewValhallaClient(valhallaURL),
 		toll:     service.NewTollCalculator(dataPath),
 		co2:      service.NewCO2Calculator(),
+		cache:    newResponseCache(256, 15*time.Minute),
 		logger:   logger,
 	}
 }
 
 // parseAndValidate decodes the request body and validates common fields.
-func (h *RouteHandler) parseAndValidate(w http.ResponseWriter, r *http.Request) (*model.RouteRequest, bool) {
+// The raw body is returned as well; it is the cache identity of the request.
+func (h *RouteHandler) parseAndValidate(w http.ResponseWriter, r *http.Request) (*model.RouteRequest, []byte, bool) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "POST required")
-		return nil, false
+		return nil, nil, false
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "unable to read body: "+err.Error())
+		return nil, nil, false
 	}
 
 	var req model.RouteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
-		return nil, false
+		return nil, nil, false
 	}
 
 	if req.Origin.Lat == 0 && req.Origin.Lon == 0 {
 		writeError(w, http.StatusBadRequest, "origin is required")
-		return nil, false
+		return nil, nil, false
 	}
 	if req.Destination.Lat == 0 && req.Destination.Lon == 0 {
 		writeError(w, http.StatusBadRequest, "destination is required")
-		return nil, false
+		return nil, nil, false
 	}
 
 	if req.Vehicle != nil {
 		if err := req.Vehicle.ValidateEuroClass(); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
-			return nil, false
+			return nil, nil, false
 		}
 	}
 
-	return &req, true
+	return &req, body, true
+}
+
+// serveCached writes the cached response when the identical request was
+// answered recently. Any change to the request (waypoints, vehicle, …)
+// produces a different key and recomputes.
+func (h *RouteHandler) serveCached(w http.ResponseWriter, endpoint string, body []byte) (string, bool) {
+	key := h.cache.Key(endpoint, body)
+	if cached, ok := h.cache.Get(key); ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		w.WriteHeader(http.StatusOK)
+		w.Write(cached)
+		return key, true
+	}
+	return key, false
+}
+
+func (h *RouteHandler) writeAndCache(w http.ResponseWriter, key string, v any) {
+	bytes, err := json.Marshal(v)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "marshal response: "+err.Error())
+		return
+	}
+	h.cache.Set(key, bytes)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(bytes)
 }
 
 // getRoute calls Valhalla and returns the result with timing.
@@ -93,8 +130,12 @@ func buildRouteInfo(route *service.ValhallaResult, vehicle *model.VehicleSpec) m
 
 // ServeHTTP handles POST /api/v1/route — full response (route + toll + CO₂).
 func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	req, ok := h.parseAndValidate(w, r)
+	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
+		return
+	}
+	cacheKey, hit := h.serveCached(w, "route", body)
+	if hit {
 		return
 	}
 
@@ -113,7 +154,7 @@ func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"distance", route.Distance,
 	)
 
-	writeJSON(w, http.StatusOK, model.RouteResponse{
+	h.writeAndCache(w, cacheKey, model.RouteResponse{
 		Route:           buildRouteInfo(route, req.Vehicle),
 		CarbonFootprint: co2,
 		Toll:            toll,
@@ -122,8 +163,12 @@ func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeToll handles POST /api/v1/toll — route + toll only.
 func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
-	req, ok := h.parseAndValidate(w, r)
+	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
+		return
+	}
+	cacheKey, hit := h.serveCached(w, "toll", body)
+	if hit {
 		return
 	}
 
@@ -141,7 +186,7 @@ func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
 		"tollTotal", toll.TotalCost,
 	)
 
-	writeJSON(w, http.StatusOK, model.TollResponse{
+	h.writeAndCache(w, cacheKey, model.TollResponse{
 		Route: buildRouteInfo(route, req.Vehicle),
 		Toll:  toll,
 	})
@@ -149,8 +194,12 @@ func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
 
 // ServeCO2 handles POST /api/v1/co2 — route + CO₂ only.
 func (h *RouteHandler) ServeCO2(w http.ResponseWriter, r *http.Request) {
-	req, ok := h.parseAndValidate(w, r)
+	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
+		return
+	}
+	cacheKey, hit := h.serveCached(w, "co2", body)
+	if hit {
 		return
 	}
 
@@ -168,7 +217,7 @@ func (h *RouteHandler) ServeCO2(w http.ResponseWriter, r *http.Request) {
 		"co2kg", co2.TotalKgCO2e,
 	)
 
-	writeJSON(w, http.StatusOK, model.CO2Response{
+	h.writeAndCache(w, cacheKey, model.CO2Response{
 		Route:           buildRouteInfo(route, req.Vehicle),
 		CarbonFootprint: co2,
 	})
