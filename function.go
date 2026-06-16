@@ -24,7 +24,15 @@ func init() {
 		valhallaURL := envOr("VALHALLA_BASE_URL", "http://localhost:8002")
 		dataPath := envOr("DATA_PATH", "./internal/data")
 
-		routeHandler = handler.NewRouteHandler(valhallaURL, dataPath, logger)
+		// Optional: capture computed queries to GCS for the PTV benchmark.
+		var queryStore *handler.QueryStore
+		if envOr("STORE_QUERIES", "false") == "true" {
+			bucket := envOr("QUERY_BUCKET", "filogic-opentms-valhalla-queries")
+			queryStore = handler.NewQueryStore(bucket, logger)
+			logger.Info("query capture enabled", "bucket", bucket)
+		}
+
+		routeHandler = handler.NewRouteHandler(valhallaURL, dataPath, queryStore, logger)
 
 		logger.Info("viatiq function initialized", "valhallaURL", valhallaURL)
 	})

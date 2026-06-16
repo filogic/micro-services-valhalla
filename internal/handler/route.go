@@ -13,20 +13,22 @@ import (
 )
 
 type RouteHandler struct {
-	valhalla *service.ValhallaClient
-	toll     *service.TollCalculator
-	co2      *service.CO2Calculator
-	cache    *responseCache
-	logger   *slog.Logger
+	valhalla   *service.ValhallaClient
+	toll       *service.TollCalculator
+	co2        *service.CO2Calculator
+	cache      *responseCache
+	queryStore *QueryStore // nil when query capture is disabled
+	logger     *slog.Logger
 }
 
-func NewRouteHandler(valhallaURL, dataPath string, logger *slog.Logger) *RouteHandler {
+func NewRouteHandler(valhallaURL, dataPath string, queryStore *QueryStore, logger *slog.Logger) *RouteHandler {
 	return &RouteHandler{
-		valhalla: service.NewValhallaClient(valhallaURL),
-		toll:     service.NewTollCalculator(dataPath),
-		co2:      service.NewCO2Calculator(),
-		cache:    newResponseCache(256, 15*time.Minute),
-		logger:   logger,
+		valhalla:   service.NewValhallaClient(valhallaURL),
+		toll:       service.NewTollCalculator(dataPath),
+		co2:        service.NewCO2Calculator(),
+		cache:      newResponseCache(256, 15*time.Minute),
+		queryStore: queryStore,
+		logger:     logger,
 	}
 }
 
@@ -153,6 +155,12 @@ func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"valhallaMs", valhallaMs,
 		"distance", route.Distance,
 	)
+
+	// Capture the computed query for the PTV benchmark — only on cache-miss
+	// (we are here), best-effort, never blocking the response.
+	if h.queryStore != nil {
+		go h.queryStore.Put(req, toll)
+	}
 
 	h.writeAndCache(w, cacheKey, model.RouteResponse{
 		Route:           buildRouteInfo(route, req.Vehicle),
