@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/filogic/micro-services-valhalla/internal/model"
 )
@@ -98,6 +100,40 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 		return rate
 	}
 
+	// iso2 normalizes a maneuver/segment country — which may be a region
+	// code like "BE-VLG" — to an ISO 3166-1 alpha-2 code for the
+	// per-country rollup and the segment's Country field.
+	iso2 := func(code string) string {
+		if code == "" {
+			return ""
+		}
+		if config, ok := tc.configs[code]; ok && config.Country != "" {
+			return config.Country
+		}
+		if len(code) >= 2 {
+			return strings.ToUpper(code[:2])
+		}
+		return strings.ToUpper(code)
+	}
+
+	// Per-country rollup: cost and tolled distance come from flushed
+	// segments; total distance is summed over every maneuver (tolled or
+	// not) so consumers can show a tolled-vs-total fraction.
+	type countryAccumulator struct {
+		cost    float64
+		tolled  float64 // meters
+		total   float64 // meters
+	}
+	byCountry := map[string]*countryAccumulator{}
+	accumulatorFor := func(iso string) *countryAccumulator {
+		acc, ok := byCountry[iso]
+		if !ok {
+			acc = &countryAccumulator{}
+			byCountry[iso] = acc
+		}
+		return acc
+	}
+
 	// Walk the maneuvers and accumulate contiguous tolled stretches.
 	// A segment ends when a non-tolled maneuver, a country change or a
 	// leg boundary is encountered.
@@ -128,8 +164,10 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 			cost := (seg.distance / 1000.0) * seg.rate
 			totalCost += cost
 
+			iso := iso2(seg.country)
 			rate := seg.rate
 			out := model.TollSegment{
+				Country:   iso,
 				Cost:      math.Round(cost*100) / 100,
 				Distance:  math.Round(seg.distance),
 				Duration:  math.Round(seg.duration*1000) / 1000,
@@ -137,6 +175,12 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 			}
 			if pts := sliceShape(leg.Points, seg.begin, seg.end); len(pts) >= 2 {
 				out.Polyline = encodePolyline(pts)
+			}
+
+			if iso != "" {
+				acc := accumulatorFor(iso)
+				acc.cost += cost
+				acc.tolled += seg.distance
 			}
 
 			summary.TotalDistance += out.Distance
@@ -151,6 +195,10 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 		gapEnd := 0
 
 		for _, m := range leg.Maneuvers {
+			if iso := iso2(m.CountryCode); iso != "" {
+				accumulatorFor(iso).total += m.Length
+			}
+
 			rate := 0.0
 			if m.CountryCode != "" && IsTollRoad(m.CountryCode, m.StreetNames) {
 				rate = rateFor(m.CountryCode)
@@ -194,6 +242,36 @@ func (tc *TollCalculator) Calculate(route *ValhallaResult, vehicle *model.Vehicl
 	}
 
 	summary.TotalCost = math.Round(totalCost*100) / 100
+
+	// Roll the accumulators up into the per-country summary. Only
+	// countries that were actually tolled are included (a pure-transit
+	// country with no toll contributes nothing to the dashboard).
+	for iso, acc := range byCountry {
+		if acc.cost <= 0 && acc.tolled <= 0 {
+			continue
+		}
+
+		entry := model.TollCountrySummary{
+			Country:        iso,
+			Cost:           math.Round(acc.cost*100) / 100,
+			TolledDistance: math.Round(acc.tolled),
+			TotalDistance:  math.Round(acc.total),
+		}
+		if acc.total > 0 {
+			entry.TollFraction = math.Round((acc.tolled/acc.total)*1000) / 1000
+		}
+		if acc.tolled > 0 {
+			rate := math.Round((acc.cost/(acc.tolled/1000.0))*1000) / 1000
+			entry.RatePerKm = &rate
+		}
+		summary.ByCountry = append(summary.ByCountry, entry)
+	}
+
+	// Highest toll cost first — the LOS dashboard scales its bars off the
+	// leading entry.
+	sort.Slice(summary.ByCountry, func(i, j int) bool {
+		return summary.ByCountry[i].Cost > summary.ByCountry[j].Cost
+	})
 
 	return summary
 }

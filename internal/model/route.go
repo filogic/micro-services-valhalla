@@ -158,20 +158,34 @@ type EmissionFactors struct {
 }
 
 type TollSummary struct {
-	TotalCost     float64       `json:"totalCost"`
-	TotalDistance float64       `json:"totalDistance"` // tolled meters, sum of all segments
-	Segments      []TollSegment `json:"segments"`
+	TotalCost     float64              `json:"totalCost"`
+	TotalDistance float64              `json:"totalDistance"` // tolled meters, sum of all segments
+	Segments      []TollSegment        `json:"segments"`
+	ByCountry     []TollCountrySummary `json:"byCountry,omitempty"` // per-country rollup, sorted by cost desc
 }
 
 // TollSegment is a contiguous tolled stretch of the route. A new segment
 // starts whenever the toll country changes or a non-tolled stretch is
 // passed in between.
 type TollSegment struct {
+	Country   string   `json:"country,omitempty"` // ISO 3166-1 alpha-2 (regions rolled up, e.g. BE-VLG → BE)
 	Cost      float64  `json:"cost"`
 	Distance  float64  `json:"distance"` // tolled meters
 	Duration  float64  `json:"duration"` // seconds spent on the tolled stretch
 	RatePerKm *float64 `json:"ratePerKm,omitempty"`
 	Polyline  string   `json:"polyline,omitempty"` // encoded polyline (precision 6) of the tolled stretch
+}
+
+// TollCountrySummary aggregates the toll of all segments in one country,
+// plus the total distance driven there so consumers can show a
+// tolled-vs-total breakdown (e.g. the LOS dashboard's per-country bars).
+type TollCountrySummary struct {
+	Country        string   `json:"country"`        // ISO 3166-1 alpha-2
+	Cost           float64  `json:"cost"`           // EUR, sum of the country's tolled segments
+	TolledDistance float64  `json:"tolledDistance"` // tolled meters in the country
+	TotalDistance  float64  `json:"totalDistance"`  // total meters driven in the country (tolled + free)
+	TollFraction   float64  `json:"tollFraction"`   // tolledDistance / totalDistance, 0..1
+	RatePerKm      *float64 `json:"ratePerKm,omitempty"` // effective EUR/km (cost / tolled km)
 }
 
 // TollResponse is returned by POST /api/v1/toll.

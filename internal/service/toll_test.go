@@ -102,6 +102,62 @@ func TestCalculateBuildsContiguousSegments(t *testing.T) {
 	}
 }
 
+func TestCalculateBuildsPerCountryRollup(t *testing.T) {
+	route := &ValhallaResult{
+		Legs: []ValhallaLeg{{
+			Points: makePoints(41),
+			Maneuvers: []ValhallaManeuver{
+				// NL: 8000m tolled + 1000m non-tolled local + 2000m tolled = 11000m total, 10000m tolled
+				{Length: 5000, Time: 180, CountryCode: "NL", StreetNames: []string{"A2"}, BeginShapeIndex: 0, EndShapeIndex: 10},
+				{Length: 3000, Time: 120, CountryCode: "NL", StreetNames: []string{"A2"}, BeginShapeIndex: 10, EndShapeIndex: 20},
+				{Length: 1000, Time: 90, CountryCode: "NL", StreetNames: []string{"Dorpsstraat"}, BeginShapeIndex: 20, EndShapeIndex: 25},
+				{Length: 2000, Time: 60, CountryCode: "NL", StreetNames: []string{"A12"}, BeginShapeIndex: 25, EndShapeIndex: 30},
+				// DE: 4000m tolled = 4000m total, all tolled
+				{Length: 4000, Time: 150, CountryCode: "DE", StreetNames: []string{"A3"}, BeginShapeIndex: 30, EndShapeIndex: 40},
+			},
+		}},
+	}
+
+	summary := newTestCalculator().Calculate(route, truckSpec(40))
+
+	// Segments carry their ISO-2 country.
+	if summary.Segments[0].Country != "NL" || summary.Segments[2].Country != "DE" {
+		t.Fatalf("segment countries: got %q / %q", summary.Segments[0].Country, summary.Segments[2].Country)
+	}
+
+	if len(summary.ByCountry) != 2 {
+		t.Fatalf("expected 2 country rollups, got %d: %+v", len(summary.ByCountry), summary.ByCountry)
+	}
+
+	// Sorted by cost desc: NL (2.01) before DE (1.39).
+	nl, de := summary.ByCountry[0], summary.ByCountry[1]
+	if nl.Country != "NL" || de.Country != "DE" {
+		t.Fatalf("rollup order: want NL,DE, got %s,%s", nl.Country, de.Country)
+	}
+
+	// NL: cost 1.608+0.402=2.01, tolled 10000, total 11000, fraction 0.909, rate 0.201
+	if nl.Cost != 2.01 {
+		t.Errorf("NL cost: want 2.01, got %v", nl.Cost)
+	}
+	if nl.TolledDistance != 10000 || nl.TotalDistance != 11000 {
+		t.Errorf("NL distances: want tolled 10000 / total 11000, got %v / %v", nl.TolledDistance, nl.TotalDistance)
+	}
+	if nl.TollFraction != 0.909 {
+		t.Errorf("NL tollFraction: want 0.909, got %v", nl.TollFraction)
+	}
+	if nl.RatePerKm == nil || *nl.RatePerKm != 0.201 {
+		t.Errorf("NL ratePerKm: want 0.201, got %v", nl.RatePerKm)
+	}
+
+	// DE: cost 1.39, tolled=total=4000, fraction 1.0, rate 0.348
+	if de.Cost != 1.39 || de.TolledDistance != 4000 || de.TotalDistance != 4000 || de.TollFraction != 1.0 {
+		t.Errorf("DE rollup: got %+v", de)
+	}
+	if de.RatePerKm == nil || *de.RatePerKm != 0.348 {
+		t.Errorf("DE ratePerKm: want 0.348, got %v", de.RatePerKm)
+	}
+}
+
 func TestCalculateWithoutVehicleReturnsEmptySummary(t *testing.T) {
 	route := &ValhallaResult{
 		Legs: []ValhallaLeg{{
