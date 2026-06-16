@@ -120,13 +120,28 @@ which is what most sampled trucks hit. Other cells exist — see `toll_rates.jso
 | Country | 40t EURO_VI €/km | Last change (date: old→new) | Observed Δdev | Confidence | Notes |
 |---|---|---|---|---|---|
 | NL | 0.201 | — | — | low | Setup benchmark: meanPctDev −4.5% but **very noisy** (per-route +36% … −95%) → mostly road-matching, NOT a clean rate signal. Do not tune until the signal stabilises. |
-| DE | 0.348 | — | — | low | Setup benchmark: **−14.5% across 4 routes, consistent**, total distances match → looks like a genuine rate-low. Best first tuning candidate. |
+| DE | 0.355 | 2026-06-16: 0.348→0.355 (+2%, commit 4e0fc02) | pending — measure next run (predicted DE mean ~ −16%, long route ~ −2%) | medium | Bimodal: long München route −3.9% (clean, road-matching averages out) vs short routes −33% (road-matching). Bumped on the clean long-route signal; +2% overshoots nothing (worst −3.9%→−1.9%). If next run shows DE mean moved ~+2pp as predicted → confirmed rate-bound, can step larger. |
 | BE-VLG | 0.204 | — | — | low | PTV reports `BE` only; we split VLG/WAL/BRU. Setup benchmark BE = **+178%** but on only 2 routes with NL −95% alongside → road-matching, not rate. Flag, don't tune. |
 | BE-WAL | 0.194 | — | — | low | ~+0.6% historically (PTV). |
 | BE-BRU | 0.168 | — | — | low | |
 | FR | 0.20 | — | — | low | No FR samples yet. |
 
 ## Learnings (append every run — newest first)
+
+- **2026-06-16 (run 2 — first tuning, n=10/30):** meanTotalPctDev −12.1%.
+  **DE −18.2% (n=5) but bimodal** — long München route −3.9% (clean; on a long
+  route the road-matching noise averages out, so this is the trustworthy rate
+  signal) vs short routes −33% (road-matching). Total distances match on every
+  route, so routing is comparable. **Action:** applied the first bounded step,
+  DE >18t EURO_VI/EURO_VI_E 0.348→0.355 (+2%, commit 4e0fc02); predicted DE mean
+  → ~−16%, long route → ~−2% by next run. **NL +3.5% mean but wild sign-flipping
+  (+36% … −95%) → road-matching, NOT tuned.** **BE +100% (−56% … +181%) →
+  road-matching, NOT tuned.** Many PTV results had `violated:true` (truck-profile
+  restrictions) → weight those routes' deviations lower. **For next run:** verify
+  DE moved ~+2pp as predicted (if yes, confident to step DE again; if not, revert
+  4e0fc02 and reclassify DE as road-matching). NL and BE need a human
+  `toll_roads*` review — their per-country attribution differs from PTV on short
+  routes; a rate change cannot fix that and would harm the long routes.
 
 - **2026-06-16 (setup baseline, n=8, not tuned):** meanTotalPctDev −12%.
   Per-country: DE −14.5% (n=4, consistent, dist matches → rate-low candidate);
