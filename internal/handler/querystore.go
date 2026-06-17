@@ -37,12 +37,13 @@ func NewQueryStore(bucket string, logger *slog.Logger) *QueryStore {
 
 // storedQuery is the trimmed record persisted per query.
 type storedQuery struct {
-	Timestamp   string             `json:"timestamp"`
-	Origin      model.Coordinate   `json:"origin"`
-	Destination model.Coordinate   `json:"destination"`
-	Waypoints   []model.Coordinate `json:"waypoints,omitempty"`
-	Vehicle     *model.VehicleSpec `json:"vehicle,omitempty"`
-	Toll        storedToll         `json:"toll"`
+	TransactionId string             `json:"transactionId,omitempty"`
+	Timestamp     string             `json:"timestamp"`
+	Origin        model.Coordinate   `json:"origin"`
+	Destination   model.Coordinate   `json:"destination"`
+	Waypoints     []model.Coordinate `json:"waypoints,omitempty"`
+	Vehicle       *model.VehicleSpec `json:"vehicle,omitempty"`
+	Toll          storedToll         `json:"toll"`
 }
 
 type storedToll struct {
@@ -61,17 +62,18 @@ func (s *QueryStore) clientOnce() (*storage.Client, error) {
 // Put uploads a trimmed record of the query and its toll result. It is meant
 // to be called in its own goroutine with a background context; it applies its
 // own timeout and swallows all errors.
-func (s *QueryStore) Put(req *model.RouteRequest, toll model.TollSummary) {
+func (s *QueryStore) Put(transactionID string, req *model.RouteRequest, toll model.TollSummary) {
 	if s == nil || s.bucket == "" || req == nil {
 		return
 	}
 
 	rec := storedQuery{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Origin:      req.Origin,
-		Destination: req.Destination,
-		Waypoints:   req.Waypoints,
-		Vehicle:     req.Vehicle,
+		TransactionId: transactionID,
+		Timestamp:     time.Now().UTC().Format(time.RFC3339),
+		Origin:        req.Origin,
+		Destination:   req.Destination,
+		Waypoints:     req.Waypoints,
+		Vehicle:       req.Vehicle,
 		Toll: storedToll{
 			TotalCost:     toll.TotalCost,
 			TotalDistance: toll.TotalDistance,

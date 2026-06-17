@@ -44,7 +44,8 @@ func Route(w http.ResponseWriter, r *http.Request) {
 	// CORS headers for browser-based clients (Angular, etc.)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Transaction-Id")
+	w.Header().Set("Access-Control-Expose-Headers", "X-Transaction-Id, X-Cache")
 	w.Header().Set("Access-Control-Max-Age", "3600")
 
 	// Handle preflight

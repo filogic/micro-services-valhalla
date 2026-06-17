@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +13,23 @@ import (
 	"github.com/filogic/micro-services-valhalla/internal/model"
 	"github.com/filogic/micro-services-valhalla/internal/service"
 )
+
+// transactionID returns the caller-supplied correlation id (X-Transaction-Id
+// header) so a single id ties the .NET request, this service's logs, and the
+// captured query together. A fresh id is generated when the caller sends none
+// (e.g. direct/LOS/benchmark calls), so every request is traceable. It is a
+// header (not a body field) on purpose: the response cache keys on the request
+// body, so an id in the body would bust the cache on every call.
+func transactionID(r *http.Request) string {
+	if id := r.Header.Get("X-Transaction-Id"); id != "" {
+		return id
+	}
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "txn-unknown"
+	}
+	return hex.EncodeToString(b[:])
+}
 
 type RouteHandler struct {
 	valhalla   *service.ValhallaClient
@@ -132,12 +151,16 @@ func buildRouteInfo(route *service.ValhallaResult, vehicle *model.VehicleSpec) m
 
 // ServeHTTP handles POST /api/v1/route — full response (route + toll + CO₂).
 func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	txn := transactionID(r)
+	w.Header().Set("X-Transaction-Id", txn)
+
 	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
 		return
 	}
 	cacheKey, hit := h.serveCached(w, "route", body)
 	if hit {
+		h.logger.Info("route served from cache", "endpoint", "route", "txn", txn)
 		return
 	}
 
@@ -151,15 +174,20 @@ func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("route calculated",
 		"endpoint", "route",
-		"totalMs", time.Since(time.Now().Add(-time.Duration(valhallaMs)*time.Millisecond)).Milliseconds(),
+		"txn", txn,
 		"valhallaMs", valhallaMs,
 		"distance", route.Distance,
+		"tollTotal", toll.TotalCost,
+		"tollDistance", toll.TotalDistance,
+		"origin", fmt.Sprintf("%.5f,%.5f", req.Origin.Lat, req.Origin.Lon),
+		"destination", fmt.Sprintf("%.5f,%.5f", req.Destination.Lat, req.Destination.Lon),
+		"waypoints", len(req.Waypoints),
 	)
 
 	// Capture the computed query for the PTV benchmark — only on cache-miss
 	// (we are here), best-effort, never blocking the response.
 	if h.queryStore != nil {
-		go h.queryStore.Put(req, toll)
+		go h.queryStore.Put(txn, req, toll)
 	}
 
 	h.writeAndCache(w, cacheKey, model.RouteResponse{
@@ -171,12 +199,16 @@ func (h *RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeToll handles POST /api/v1/toll — route + toll only.
 func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
+	txn := transactionID(r)
+	w.Header().Set("X-Transaction-Id", txn)
+
 	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
 		return
 	}
 	cacheKey, hit := h.serveCached(w, "toll", body)
 	if hit {
+		h.logger.Info("toll served from cache", "endpoint", "toll", "txn", txn)
 		return
 	}
 
@@ -189,9 +221,13 @@ func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("toll calculated",
 		"endpoint", "toll",
+		"txn", txn,
 		"valhallaMs", valhallaMs,
 		"distance", route.Distance,
 		"tollTotal", toll.TotalCost,
+		"tollDistance", toll.TotalDistance,
+		"origin", fmt.Sprintf("%.5f,%.5f", req.Origin.Lat, req.Origin.Lon),
+		"destination", fmt.Sprintf("%.5f,%.5f", req.Destination.Lat, req.Destination.Lon),
 	)
 
 	h.writeAndCache(w, cacheKey, model.TollResponse{
@@ -202,12 +238,16 @@ func (h *RouteHandler) ServeToll(w http.ResponseWriter, r *http.Request) {
 
 // ServeCO2 handles POST /api/v1/co2 — route + CO₂ only.
 func (h *RouteHandler) ServeCO2(w http.ResponseWriter, r *http.Request) {
+	txn := transactionID(r)
+	w.Header().Set("X-Transaction-Id", txn)
+
 	req, body, ok := h.parseAndValidate(w, r)
 	if !ok {
 		return
 	}
 	cacheKey, hit := h.serveCached(w, "co2", body)
 	if hit {
+		h.logger.Info("co2 served from cache", "endpoint", "co2", "txn", txn)
 		return
 	}
 
