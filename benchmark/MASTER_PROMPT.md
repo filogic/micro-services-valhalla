@@ -119,14 +119,51 @@ which is what most sampled trucks hit. Other cells exist — see `toll_rates.jso
 
 | Country | 40t EURO_VI €/km | Last change (date: old→new) | Observed Δdev | Confidence | Notes |
 |---|---|---|---|---|---|
-| NL | 0.201 | — | — | low | Setup benchmark: meanPctDev −4.5% but **very noisy** (per-route +36% … −95%) → mostly road-matching, NOT a clean rate signal. Do not tune until the signal stabilises. |
-| DE | 0.355 | 2026-06-16: 0.348→0.355 (+2%, commit 4e0fc02) | pending — measure next run (predicted DE mean ~ −16%, long route ~ −2%) | medium | Bimodal: long München route −3.9% (clean, road-matching averages out) vs short routes −33% (road-matching). Bumped on the clean long-route signal; +2% overshoots nothing (worst −3.9%→−1.9%). If next run shows DE mean moved ~+2pp as predicted → confirmed rate-bound, can step larger. |
-| BE-VLG | 0.204 | — | — | low | PTV reports `BE` only; we split VLG/WAL/BRU. Setup benchmark BE = **+178%** but on only 2 routes with NL −95% alongside → road-matching, not rate. Flag, don't tune. |
+| NL | 0.201 | — | — | low | Chronically noisy / road-matching. 06-18: meanPctDev **+42.3%** (n=8) with per-route +198%, +62.4%, +11.7, −19.7, and a PTV=0 vs ours €1.44 route. 06-16 was +3.5%. Sign + magnitude swing = road-matching, NOT a rate offset. **Do not tune — needs human `toll_roads*` review.** |
+| DE | 0.355 | 2026-06-16: 0.348→0.355 (+2%, commit 4e0fc02) | **UNVERIFIED** — DE not in 06-18 sample (random sampler drew 0 long routes). Exploratory München route still −3.9% at 0.355. | medium | Change neither confirmed nor refuted. Not worse → **no revert.** Hold at 0.355. Cannot step until a run actually samples DE. Sampler under-samples long international routes → flagged to humans (process fix, see learnings). |
+| BE-VLG | 0.204 | — | — | low | PTV reports `BE` only; we split VLG/WAL/BRU. **BE sign-flipped +100% (06-16) → −44% (06-18)** across disjoint samples → sampling/road-matching instability, not a stable rate. 06-18 BE routes also show NL-over (+62%) alongside BE-under (−39%) on the SAME route = toll misattribution. **Flag, don't tune.** |
 | BE-WAL | 0.194 | — | — | low | ~+0.6% historically (PTV). |
 | BE-BRU | 0.168 | — | — | low | |
 | FR | 0.20 | — | — | low | No FR samples yet. |
 
 ## Learnings (append every run — newest first)
+
+- **2026-06-18 (run 3 — no tuning, n=10/658):** meanTotalPctDev **−14.7%** (vs
+  06-16 −12.1%, but the two runs sampled largely **disjoint** route sets, so the
+  headline is not directly comparable). perCountry: **NL +42.3% (n=8)**,
+  **BE −44.0% (n=4)**, **DE not sampled (n=0)**.
+  **No rate changes made this run** — every candidate failed an evidence gate:
+  • **DE — UNVERIFIED, held.** The random sampler drew zero long/international
+  routes, so the official bucketed sample has no DE at all → cannot evaluate the
+  06-16 prediction (DE mean ~−16%, long route ~−2%). An exploratory pre-sample
+  München route showed DE −3.9% at the deployed 0.355 (V €234.76 / PTV €244.32);
+  that is **not worse** than the pre-change −3.9%, so per the revert rule (revert
+  only if *worse*) I **did not revert** 4e0fc02. DE stays 0.355, confidence
+  medium. Cannot step DE until a run samples it. **Process flaw flagged to human:
+  the sampler picks 10 of 658 uniformly, so DE (long routes, rare) is missed on
+  most runs and the DE loop can't close. Recommend stratified sampling by
+  detected country — this is a `benchmark_ptv.py` (code) change, NOT auto-made.**
+  • **NL — road-matching, not tuned.** +42.3% mean but per-route +198.2, +62.4,
+  +12.2, +11.7, +11.7, −0.1, −19.7, plus a route where PTV charges €0 and we
+  charge €1.44. meanAbsDiff only €1.72. Distance ratios swing −21.7% … +71.4% on
+  several NL routes → engines not on comparable roads. Same chronic NL pattern as
+  06-16; a rate change can't fix attribution. **Needs human `toll_roads*` review.**
+  • **BE — road-matching / unstable, not tuned.** BE meanPctDev flipped from
+  **+100% (06-16)** to **−44% (06-18)**. This run BE was consistently negative on
+  3 distance-matched routes (−38.7% / −25.7% / −45.7%, distdev ≈ 0; the 4th,
+  −66.1%, had distdev −14.9% → mis-routing, excluded), which *looks* rate-bound.
+  BUT the full sign-flip vs last run across disjoint samples = the deviation is
+  route-dependent, not a stable offset; tuning on one run's sign would be
+  hunting. Also the −39% BE routes carry **NL +62% on the same route** → classic
+  toll misattribution between adjacent countries (totals match, per-country split
+  wrong). **Flag for human; do not tune.** *If next run again shows BE
+  consistently negative with matching distances AND stable sign, then it is
+  rate-bound and a bounded −gap step is warranted.*
+  **For next run:** (1) ensure DE is sampled — if the sampler is fixed/stratified,
+  re-check the 4e0fc02 prediction; if DE still ≈ −3.9% unchanged at 0.355, treat
+  4e0fc02 as ineffective (verify it actually deployed) and reconsider. (2) Watch
+  whether BE's sign is stable this time before any BE step. (3) NL/BE both await a
+  human road-matching review of `toll_roads*`.
 
 - **2026-06-16 (run 2 — first tuning, n=10/30):** meanTotalPctDev −12.1%.
   **DE −18.2% (n=5) but bimodal** — long München route −3.9% (clean; on a long
